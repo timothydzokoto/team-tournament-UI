@@ -12,7 +12,14 @@
       "tsconfigPaths": true
     },
 
-    "plugins": [],
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Team Tournament Mobile to capture face images for enrollment and verification."
+        }
+      ]
+    ],
 
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -26,7 +33,10 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Team Tournament Mobile to capture face images for enrollment and verification."
+      }
     },
     "android": {
       "adaptiveIcon": {

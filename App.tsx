@@ -1,14 +1,19 @@
-import { ScreenContent } from 'components/ScreenContent';
 import { StatusBar } from 'expo-status-bar';
+import { GluestackUIProvider } from '@gluestack-ui/themed';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import './global.css';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { appGluestackConfig } from './src/theme/gluestack';
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ScreenContent title="Home" path="App.tsx"></ScreenContent>
-      <StatusBar style="auto" />
+      <GluestackUIProvider config={appGluestackConfig}>
+        <AppNavigator />
+        <StatusBar style="dark" />
+      </GluestackUIProvider>
     </SafeAreaProvider>
   );
 }
