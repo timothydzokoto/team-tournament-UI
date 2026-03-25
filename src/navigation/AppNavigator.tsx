@@ -1,13 +1,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import {
-  Button as GsButton,
-  ButtonText as GsButtonText,
-  Toast,
-  ToastDescription,
-  ToastTitle,
-  useToast,
-} from '@gluestack-ui/themed';
+import { Ionicons } from '@expo/vector-icons';
+import { Toast, ToastDescription, ToastTitle, useToast } from '@gluestack-ui/themed';
 
 import { SessionProvider, useSession } from '../context/SessionContext';
 import { ActivityScreen } from '../screens/ActivityScreen';
@@ -22,6 +16,7 @@ import { FaceMatchScreen } from '../screens/FaceMatchScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LiveCaptureScreen } from '../screens/LiveCaptureScreen';
 import { LoginScreen } from '../screens/LoginScreen';
+import { SignupScreen } from '../screens/SignupScreen';
 import { PlayerDetailScreen } from '../screens/PlayerDetailScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { SubteamDetailScreen } from '../screens/SubteamDetailScreen';
@@ -83,6 +78,7 @@ function RootNavigation() {
     asset: CaptureAsset;
     source: 'camera';
   } | null>(null);
+  const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
     if (!flashMessage) {
@@ -111,6 +107,7 @@ function RootNavigation() {
     if (!token) {
       setActiveTab('Home');
       setTabStacks(createInitialStacks());
+      setAuthScreen('login');
     }
   }, [token]);
 
@@ -129,7 +126,11 @@ function RootNavigation() {
   }
 
   if (!token) {
-    return <LoginScreen />;
+    return authScreen === 'login' ? (
+      <LoginScreen onSwitchToSignup={() => setAuthScreen('signup')} />
+    ) : (
+      <SignupScreen onSwitchToLogin={() => setAuthScreen('login')} />
+    );
   }
 
   function push(route: AppRoute, tab: RootTab = activeTab) {
@@ -457,25 +458,77 @@ function RootNavigation() {
         })}
       </View>
 
-      <View className="border-t border-stone-800 bg-panel px-3 pb-3 pt-2">
-        <View className="mx-auto w-full max-w-[1120px] flex-row items-center justify-between gap-2">
-          {(['Home', 'Teams', 'Verify', 'Activity', 'Profile'] as RootTab[]).map((tab) => (
-            <TabButton
-              key={tab}
-              active={activeTab === tab}
-              hint={TAB_HINTS[tab]}
-              label={TAB_LABELS[tab]}
-              onPress={() => {
-                if (tab === 'Activity') {
-                  replaceTabRoot('Activity', {
-                    name: 'Activity',
-                    params: { refreshKey: Date.now() },
-                  });
-                }
-                switchTab(tab);
-              }}
-            />
-          ))}
+      <View className="border-t border-[#1e293b] bg-[#030514] shadow-[0_-10px_28px_rgba(0,0,0,0.45)]">
+        <View className="mx-auto w-full max-w-[1120px] flex-row items-center justify-around px-4 py-3">
+          {(
+            [
+              { label: TAB_LABELS.Home, icon: 'home', tab: 'Home' },
+              { label: TAB_LABELS.Teams, icon: 'people', tab: 'Teams' },
+              { label: TAB_LABELS.Verify, icon: 'camera', tab: 'Verify', center: true },
+              { label: TAB_LABELS.Activity, icon: 'list', tab: 'Activity' },
+              { label: TAB_LABELS.Profile, icon: 'person', tab: 'Profile' },
+            ] as {
+              label: string;
+              icon: keyof typeof Ionicons.glyphMap;
+              tab: RootTab;
+              center?: boolean;
+            }[]
+          ).map(({ label, icon, tab, center }) => {
+            const isActive = activeTab === tab;
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => {
+                  if (tab === 'Activity') {
+                    replaceTabRoot('Activity', {
+                      name: 'Activity',
+                      params: { refreshKey: Date.now() },
+                    });
+                  }
+                  switchTab(tab);
+                }}
+                className="items-center justify-center">
+                <View
+                  className={`items-center justify-center rounded-full ${center ? 'p-0.5' : 'p-1'}`}
+                  style={{
+                    backgroundColor: center ? 'transparent' : '#0a1226',
+                    shadowColor: isActive ? 'rgba(103, 131, 255, 0.72)' : 'rgba(0, 0, 0, 0.25)',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: isActive ? 1 : 0.5,
+                    shadowRadius: isActive ? 12 : 5,
+                  }}>
+                  <View
+                    className="items-center justify-center rounded-full"
+                    style={{
+                      width: center ? 62 : 48,
+                      height: center ? 62 : 48,
+                      backgroundColor: isActive ? '#0c1832' : '#111b33',
+                      borderRadius: 999,
+                      padding: center ? 2 : 0,
+                    }}>
+                    <Ionicons
+                      name={
+                        isActive
+                          ? (`${icon}` as keyof typeof Ionicons.glyphMap)
+                          : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
+                      }
+                      size={center ? 30 : 22}
+                      color={isActive ? '#fff' : '#9ca3af'}
+                      style={{
+                        textShadowColor: isActive ? 'rgba(96, 165, 250, 0.85)' : 'transparent',
+                        textShadowOffset: { width: 0, height: 0 },
+                        textShadowRadius: isActive ? 8 : 0,
+                      }}
+                    />
+                  </View>
+                </View>
+                <Text
+                  className={`mt-1 text-[11px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
     </View>
@@ -793,45 +846,6 @@ function renderRoute({
           : Promise.reject(new Error('Player deletion is unavailable without roster context.'))
       }
     />
-  );
-}
-
-function TabButton({
-  active,
-  hint,
-  label,
-  onPress,
-}: {
-  active: boolean;
-  hint: string;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <GsButton
-      flex={1}
-      size="sm"
-      variant={active ? 'solid' : 'outline'}
-      action={active ? 'primary' : 'secondary'}
-      borderRadius="$2xl"
-      bg={active ? '$amber500' : '$backgroundDark950'}
-      borderColor={active ? '$amber400' : '$borderDark800'}
-      onPress={onPress}>
-      <View className="items-center gap-1">
-        <GsButtonText
-          textTransform="uppercase"
-          letterSpacing="$md"
-          color={active ? '$backgroundDark950' : '$textLight400'}>
-          {label}
-        </GsButtonText>
-        <Text
-          className={`text-[10px] uppercase tracking-[1px] ${
-            active ? 'text-stone-900/75' : 'text-stone-500'
-          }`}>
-          {hint}
-        </Text>
-      </View>
-    </GsButton>
   );
 }
 

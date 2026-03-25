@@ -9,7 +9,7 @@ import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { useSession } from '../context/SessionContext';
-import { ApiError } from '../services/api';
+import { getConnectivityMessage, isConnectivityError } from '../services/api';
 import { getBackendHealth, type BackendHealth } from '../services/health';
 import { getTeams, type Team } from '../services/teams';
 import {
@@ -43,6 +43,7 @@ export function DashboardScreen({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [healthConnectivityError, setHealthConnectivityError] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -88,9 +89,11 @@ export function DashboardScreen({
       const nextHealth = await getBackendHealth();
       setHealth(nextHealth);
       setHealthError(null);
+      setHealthConnectivityError(false);
     } catch (healthFetchError) {
       setHealth(null);
-      setHealthError(getErrorMessage(healthFetchError));
+      setHealthConnectivityError(isConnectivityError(healthFetchError));
+      setHealthError(getConnectivityMessage(healthFetchError, 'Could not load backend readiness.'));
     }
   }
 
@@ -144,7 +147,14 @@ export function DashboardScreen({
             />
           </View>
         ) : healthError ? (
-          <FeedbackState title="Health check failed" message={healthError} tone="error" />
+          <View className="gap-3">
+            <FeedbackState
+              title={healthConnectivityError ? 'Backend unreachable' : 'Health check failed'}
+              message={healthError}
+              tone="error"
+            />
+            <AppButton label="Retry health check" onPress={loadHealth} variant="secondary" />
+          </View>
         ) : (
           <FeedbackState
             title="No health data"
@@ -287,7 +297,20 @@ export function DashboardScreen({
             <Text className="mt-3 text-sm text-stone-400">Loading teams...</Text>
           </View>
         ) : error ? (
-          <FeedbackState title="Load failed" message={error} tone="error" />
+          <View className="gap-3">
+            <FeedbackState
+              title={isConnectivityErrorMessage(error) ? 'Teams unavailable' : 'Load failed'}
+              message={error}
+              tone="error"
+            />
+            {token ? (
+              <AppButton
+                label="Retry team load"
+                onPress={() => loadTeams(token)}
+                variant="secondary"
+              />
+            ) : null}
+          </View>
         ) : teams.length === 0 ? (
           <FeedbackState
             title={debouncedSearch.trim() ? 'No team matches' : 'No teams yet'}
@@ -532,13 +555,9 @@ function getBestConfidence(history: VerificationHistoryItem[]) {
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail;
-  }
+  return getConnectivityMessage(error, 'Something went wrong while loading teams.');
+}
 
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Something went wrong while loading teams.';
+function isConnectivityErrorMessage(message: string) {
+  return message.includes('Could not reach') || message.includes('timed out');
 }

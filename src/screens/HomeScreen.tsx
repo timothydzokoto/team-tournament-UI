@@ -8,7 +8,7 @@ import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { useSession } from '../context/SessionContext';
-import { ApiError } from '../services/api';
+import { getConnectivityMessage, isConnectivityError } from '../services/api';
 import { getBackendHealth, type BackendHealth } from '../services/health';
 import { getTeams } from '../services/teams';
 import {
@@ -27,30 +27,45 @@ export function HomeScreen({ onOpenTeams, onOpenFaceMatch }: Props) {
   const [history, setHistory] = useState<VerificationHistoryItem[]>([]);
   const [health, setHealth] = useState<BackendHealth | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [snapshotConnectivityError, setSnapshotConnectivityError] = useState(false);
+  const [healthConnectivityError, setHealthConnectivityError] = useState(false);
 
   const loadHomeData = useCallback(async () => {
     if (!token) {
       return;
     }
 
-    try {
-      const [teams, nextHistory, nextHealth] = await Promise.all([
-        getTeams(token),
-        getVerificationHistory(),
-        getBackendHealth(),
-      ]);
-      setTeamCount(teams.length);
-      setHistory(nextHistory);
-      setHealth(nextHealth);
+    const [teamsResult, historyResult, healthResult] = await Promise.allSettled([
+      getTeams(token),
+      getVerificationHistory(),
+      getBackendHealth(),
+    ]);
+
+    if (teamsResult.status === 'fulfilled') {
+      setTeamCount(teamsResult.value.length);
+      setSnapshotError(null);
+      setSnapshotConnectivityError(false);
+    } else {
+      setSnapshotConnectivityError(isConnectivityError(teamsResult.reason));
+      setSnapshotError(
+        getConnectivityMessage(teamsResult.reason, 'Could not load the current operator snapshot.')
+      );
+    }
+
+    if (historyResult.status === 'fulfilled') {
+      setHistory(historyResult.value);
+    }
+
+    if (healthResult.status === 'fulfilled') {
+      setHealth(healthResult.value);
       setHealthError(null);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        setHealthError(error.detail);
-      } else if (error instanceof Error) {
-        setHealthError(error.message);
-      } else {
-        setHealthError('Could not load the current operator snapshot.');
-      }
+      setHealthConnectivityError(false);
+    } else {
+      setHealthConnectivityError(isConnectivityError(healthResult.reason));
+      setHealthError(
+        getConnectivityMessage(healthResult.reason, 'Could not load backend readiness.')
+      );
     }
   }, [token]);
 
@@ -76,6 +91,15 @@ export function HomeScreen({ onOpenTeams, onOpenFaceMatch }: Props) {
         />
       }>
       <SurfaceCard eyebrow="Snapshot" title="Current status">
+        {snapshotError ? (
+          <View className="mb-3">
+            <FeedbackState
+              title={snapshotConnectivityError ? 'Snapshot unavailable' : 'Snapshot issue'}
+              message={snapshotError}
+              tone="error"
+            />
+          </View>
+        ) : null}
         <View className="gap-3 md:flex-row">
           <SummaryTile
             label="Teams"
@@ -136,7 +160,14 @@ export function HomeScreen({ onOpenTeams, onOpenFaceMatch }: Props) {
             />
           </View>
         ) : healthError ? (
-          <FeedbackState title="Status unavailable" message={healthError} tone="error" />
+          <View className="gap-3">
+            <FeedbackState
+              title={healthConnectivityError ? 'Backend unreachable' : 'Status unavailable'}
+              message={healthError}
+              tone="error"
+            />
+            <AppButton label="Retry status check" onPress={loadHomeData} variant="secondary" />
+          </View>
         ) : (
           <FeedbackState
             title="No status yet"

@@ -10,7 +10,7 @@ import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { useSession } from '../context/SessionContext';
-import { ApiError } from '../services/api';
+import { getConnectivityMessage } from '../services/api';
 import { getPlayers, type Player } from '../services/players';
 
 type Props = {
@@ -194,7 +194,20 @@ export function SubteamDetailScreen({
             <Text className="mt-3 text-sm text-stone-400">Loading players...</Text>
           </View>
         ) : error ? (
-          <FeedbackState title="Load failed" message={error} tone="error" />
+          <View className="gap-3">
+            <FeedbackState
+              title={isConnectivityErrorMessage(error) ? 'Roster unavailable' : 'Load failed'}
+              message={error}
+              tone="error"
+            />
+            {token ? (
+              <AppButton
+                label="Retry player load"
+                onPress={() => loadPlayers(token)}
+                variant="secondary"
+              />
+            ) : null}
+          </View>
         ) : visiblePlayers.length === 0 ? (
           <FeedbackState
             title={
@@ -270,13 +283,9 @@ function PlayerCard({ player, onPress }: { player: Player; onPress: () => void }
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail;
-  }
+  return getConnectivityMessage(error, 'Something went wrong while loading players.');
+}
 
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Something went wrong while loading players.';
+function isConnectivityErrorMessage(message: string) {
+  return message.includes('Could not reach') || message.includes('timed out');
 }

@@ -9,7 +9,7 @@ import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { SurfaceCard } from '../components/ui/SurfaceCard';
 import { useSession } from '../context/SessionContext';
-import { ApiError } from '../services/api';
+import { getConnectivityMessage } from '../services/api';
 import { getSubteams, type Subteam } from '../services/subteams';
 
 type Props = {
@@ -163,7 +163,20 @@ export function TeamDetailScreen({
             <Text className="mt-3 text-sm text-stone-400">Loading subteams...</Text>
           </View>
         ) : error ? (
-          <FeedbackState title="Load failed" message={error} tone="error" />
+          <View className="gap-3">
+            <FeedbackState
+              title={isConnectivityErrorMessage(error) ? 'Subteams unavailable' : 'Load failed'}
+              message={error}
+              tone="error"
+            />
+            {token ? (
+              <AppButton
+                label="Retry subteam load"
+                onPress={() => loadSubteams(token)}
+                variant="secondary"
+              />
+            ) : null}
+          </View>
         ) : subteams.length === 0 ? (
           <FeedbackState
             title={debouncedSearch.trim() ? 'No subteam matches' : 'No subteams yet'}
@@ -217,13 +230,9 @@ function SubteamCard({ subteam, onPress }: { subteam: Subteam; onPress: () => vo
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof ApiError) {
-    return error.detail;
-  }
+  return getConnectivityMessage(error, 'Something went wrong while loading subteams.');
+}
 
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Something went wrong while loading subteams.';
+function isConnectivityErrorMessage(message: string) {
+  return message.includes('Could not reach') || message.includes('timed out');
 }

@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_ORIGIN } from '../config/api';
 import { useSession } from '../context/SessionContext';
 
-export function LoginScreen() {
+export function LoginScreen({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   const { errorMessage, signIn, submitting, clearError } = useSession();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -196,6 +196,12 @@ export function LoginScreen() {
                   ) : (
                     <Text className="text-sm font-semibold text-stone-950">Connect to backend</Text>
                   )}
+                </Pressable>
+
+                <Pressable onPress={onSwitchToSignup} className="mt-4">
+                  <Text className="text-center text-sm text-stone-400">
+                    Don&apos;t have an account? <Text className="text-amber-400">Sign up</Text>
+                  </Text>
                 </Pressable>
               </View>
             </View>

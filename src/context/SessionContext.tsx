@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { login, logout, restoreSession, type AuthUser } from '../services/auth';
+import { login, logout, restoreSession, signup, type AuthUser } from '../services/auth';
 import { ApiError } from '../services/api';
 
 type SessionContextValue = {
@@ -10,6 +10,7 @@ type SessionContextValue = {
   user: AuthUser | null;
   errorMessage: string | null;
   signIn: (payload: { username: string; password: string }) => Promise<boolean>;
+  signUp: (payload: { username: string; email: string; password: string }) => Promise<boolean>;
   signOut: () => Promise<void>;
   clearError: () => void;
 };
@@ -80,6 +81,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function signUp(payload: { username: string; email: string; password: string }) {
+    if (!payload.username.trim() || !payload.email.trim() || !payload.password.trim()) {
+      setErrorMessage('Enter username, email, and password.');
+      return false;
+    }
+
+    setSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const auth = await signup({
+        username: payload.username.trim(),
+        email: payload.email.trim(),
+        password: payload.password,
+      });
+
+      const restored = await restoreSession();
+      setToken(auth.access_token);
+      setUser(restored?.user ?? null);
+      return true;
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function signOut() {
     await logout();
     setToken(null);
@@ -100,6 +129,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         user,
         errorMessage,
         signIn,
+        signUp,
         signOut,
         clearError,
       }}>

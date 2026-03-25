@@ -146,3 +146,27 @@ export function getFaceFlowErrorMessage(error: unknown, mode: FaceFlowMode) {
     ? 'Something went wrong while uploading the face image.'
     : 'Something went wrong while verifying the face image.';
 }
+
+export function isConnectivityError(error: unknown) {
+  return error instanceof ApiError && (error.status === 0 || error.status === 408);
+}
+
+export function getConnectivityMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    if (error.status === 0) {
+      return 'Could not reach the backend. Check the device connection, backend URL, and whether the API is still running.';
+    }
+
+    if (error.status === 408) {
+      return 'The request timed out. Retry on a more stable connection or after backend load settles.';
+    }
+
+    return error.detail;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
