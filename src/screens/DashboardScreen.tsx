@@ -59,7 +59,7 @@ export function DashboardScreen({
 
       try {
         const nextTeams = await getTeams(sessionToken, debouncedSearch);
-        setTeams(nextTeams);
+        setTeams(Array.isArray(nextTeams) ? nextTeams : []);
       } catch (fetchError) {
         setError(getErrorMessage(fetchError));
       } finally {

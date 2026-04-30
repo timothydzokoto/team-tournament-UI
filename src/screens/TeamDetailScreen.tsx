@@ -53,7 +53,7 @@ export function TeamDetailScreen({
 
       try {
         const nextSubteams = await getSubteams(sessionToken, teamId, debouncedSearch);
-        setSubteams(nextSubteams);
+        setSubteams(Array.isArray(nextSubteams) ? nextSubteams : []);
       } catch (fetchError) {
         setError(getErrorMessage(fetchError));
       } finally {

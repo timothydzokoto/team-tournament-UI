@@ -1,4 +1,4 @@
-import { apiRequest } from './api';
+import { apiRequest, getPageItems, type PageResponse } from './api';
 
 export type Subteam = {
   id: number;
@@ -18,16 +18,21 @@ export type SubteamCreateInput = {
 export type SubteamUpdateInput = SubteamCreateInput;
 
 export async function getSubteams(token: string, teamId: number, search?: string) {
-  const params = new URLSearchParams({ team_id: String(teamId) });
+  const params = new URLSearchParams({ skip: '0', limit: '100', team_id: String(teamId) });
 
   if (search?.trim()) {
     params.set('search', search.trim());
   }
 
-  return apiRequest<Subteam[]>(`/subteams?${params.toString()}`, {
-    method: 'GET',
-    token,
-  });
+  const payload = await apiRequest<Subteam[] | PageResponse<Subteam>>(
+    `/subteams?${params.toString()}`,
+    {
+      method: 'GET',
+      token,
+    }
+  );
+
+  return getPageItems(payload);
 }
 
 export async function getSubteam(token: string, subteamId: number) {

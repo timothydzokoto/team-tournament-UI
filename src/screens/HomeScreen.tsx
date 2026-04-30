@@ -43,7 +43,7 @@ export function HomeScreen({ onOpenTeams, onOpenFaceMatch }: Props) {
     ]);
 
     if (teamsResult.status === 'fulfilled') {
-      setTeamCount(teamsResult.value.length);
+      setTeamCount(Array.isArray(teamsResult.value) ? teamsResult.value.length : 0);
       setSnapshotError(null);
       setSnapshotConnectivityError(false);
     } else {

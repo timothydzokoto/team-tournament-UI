@@ -1,4 +1,4 @@
-import { apiRequest } from './api';
+import { apiRequest, getPageItems, type PageResponse } from './api';
 
 export type Team = {
   id: number;
@@ -20,12 +20,18 @@ export type TeamCreateInput = {
 export type TeamUpdateInput = TeamCreateInput;
 
 export async function getTeams(token: string, search?: string) {
-  const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : '';
+  const params = new URLSearchParams({ skip: '0', limit: '100' });
 
-  return apiRequest<Team[]>(`/teams${query}`, {
+  if (search?.trim()) {
+    params.set('search', search.trim());
+  }
+
+  const payload = await apiRequest<Team[] | PageResponse<Team>>(`/teams?${params.toString()}`, {
     method: 'GET',
     token,
   });
+
+  return getPageItems(payload);
 }
 
 export async function getTeam(token: string, teamId: number) {

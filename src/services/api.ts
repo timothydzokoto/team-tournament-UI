@@ -18,6 +18,14 @@ type RequestOptions = RequestInit & {
   token?: string | null;
 };
 
+export type PageResponse<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+};
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -65,6 +73,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+export function getPageItems<T>(payload: T[] | PageResponse<T>) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return payload.items;
 }
 
 function tryParseJson(value: string) {

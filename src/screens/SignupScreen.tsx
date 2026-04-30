@@ -11,19 +11,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { API_ORIGIN } from '../config/api';
 import { useSession } from '../context/SessionContext';
 
 export function SignupScreen({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
-  const { errorMessage, signUp, submitting } = useSession();
+  const { errorMessage, signUp, submitting, clearError } = useSession();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  function clearErrors() {
+    clearError();
+    setLocalError(null);
+  }
 
   async function handleSignup() {
+    setLocalError(null);
+    if (!username.trim() || !email.trim() || !password) {
+      setLocalError('Please fill in all fields.');
+      return;
+    }
     if (password !== confirmPassword) {
-      // Handle password mismatch
+      setLocalError('Passwords do not match.');
       return;
     }
     const success = await signUp({ username, email, password });
@@ -33,119 +43,138 @@ export function SignupScreen({ onSwitchToLogin }: { onSwitchToLogin: () => void 
     }
   }
 
+  const displayError = localError ?? errorMessage;
+
   return (
-    <SafeAreaView className="flex-1 bg-pitch">
+    <SafeAreaView className="flex-1 bg-indigo-600">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1">
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View className="flex-1 px-5 pb-10 pt-5 md:px-8">
-            <View className="absolute left-[-40px] top-12 h-40 w-40 rounded-full bg-amber-500/10" />
-            <View className="absolute right-[-18px] top-44 h-28 w-28 rounded-full bg-sky-500/10" />
-            <View className="absolute bottom-12 left-8 h-24 w-24 rounded-full bg-emerald-500/10" />
+          <View className="px-6 pb-12 pt-10">
+            <View className="absolute right-[-40px] top-[-30px] h-56 w-56 rounded-full bg-indigo-500/50" />
+            <View className="absolute left-[-30px] top-16 h-36 w-36 rounded-full bg-purple-400/30" />
 
-            <View className="mt-4 w-full max-w-[1120px] gap-5 self-center lg:flex-row">
-              <View className="overflow-hidden rounded-[36px] border border-amber-500/20 bg-panel lg:flex-1">
-                <View className="absolute inset-0 bg-amber-500/5" />
-                <View className="px-6 py-7 md:px-8">
-                  <View className="self-start rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-2">
-                    <Text className="text-[11px] font-medium uppercase tracking-[2px] text-amber-300">
-                      Sign up
-                    </Text>
-                  </View>
-
-                  <Text className="mt-5 text-4xl font-semibold leading-[46px] text-fog">
-                    Create your account to manage tournament data
-                  </Text>
-                  <Text className="mt-4 max-w-[620px] text-sm leading-7 text-stone-300">
-                    Sign up to access the mobile console for teams, subteams, and players.
-                  </Text>
-
-                  <View className="mt-7 gap-3">
-                    <StatusPanel
-                      label="Connection"
-                      value="Backend signup plus session creation"
-                      tone="amber"
-                    />
-                    <StatusPanel label="API origin" value={API_ORIGIN} tone="slate" />
-                    <StatusPanel
-                      label="Auth flow"
-                      value="/api/v1/auth/signup -> /api/v1/auth/me"
-                      tone="slate"
-                    />
-                  </View>
-
-                  <View className="mt-7 rounded-[28px] border border-stone-800 bg-pitch/80 p-5">
-                    <View className="flex-row items-center justify-between gap-4">
-                      <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">
-                        Form check
-                      </Text>
-                      <View className="rounded-full bg-emerald-500/15 px-3 py-2">
-                        <Text className="text-[11px] font-medium uppercase tracking-[2px] text-emerald-300">
-                          Valid
-                        </Text>
-                      </View>
-                    </View>
-                    <Text className="mt-3 text-sm leading-6 text-stone-300">
-                      Fill in your details to create an account.
-                    </Text>
-                    <View className="mt-4 gap-4">
-                      <TextInput
-                        className="rounded-lg border border-stone-700 bg-stone-800/50 px-4 py-3 text-white"
-                        placeholder="Username"
-                        placeholderTextColor="#9ca3af"
-                        value={username}
-                        onChangeText={setUsername}
-                        autoCapitalize="none"
-                      />
-                      <TextInput
-                        className="rounded-lg border border-stone-700 bg-stone-800/50 px-4 py-3 text-white"
-                        placeholder="Email"
-                        placeholderTextColor="#9ca3af"
-                        value={email}
-                        onChangeText={setEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                      />
-                      <TextInput
-                        className="rounded-lg border border-stone-700 bg-stone-800/50 px-4 py-3 text-white"
-                        placeholder="Password"
-                        placeholderTextColor="#9ca3af"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                      />
-                      <TextInput
-                        className="rounded-lg border border-stone-700 bg-stone-800/50 px-4 py-3 text-white"
-                        placeholder="Confirm Password"
-                        placeholderTextColor="#9ca3af"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry
-                      />
-                    </View>
-                    {errorMessage && (
-                      <Text className="mt-3 text-sm text-red-400">{errorMessage}</Text>
-                    )}
-                    <Pressable
-                      className="mt-4 rounded-lg bg-amber-500 px-4 py-3"
-                      onPress={handleSignup}
-                      disabled={submitting}>
-                      {submitting ? (
-                        <ActivityIndicator color="#000" />
-                      ) : (
-                        <Text className="text-center font-semibold text-black">Sign Up</Text>
-                      )}
-                    </Pressable>
-                    <Pressable onPress={onSwitchToLogin} className="mt-4">
-                      <Text className="text-center text-sm text-stone-400">
-                        Already have an account? <Text className="text-amber-400">Sign in</Text>
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
+            <View
+              className="h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <Text className="text-2xl font-bold text-white">T</Text>
             </View>
+            <Text className="mt-5 text-3xl font-bold text-white">Create account</Text>
+            <Text className="mt-2 text-sm leading-6 text-indigo-100">
+              Set up your account to start managing tournament data.
+            </Text>
+          </View>
+
+          <View
+            className="flex-1 rounded-t-[32px] bg-white px-6 pb-12 pt-8"
+            style={{ minHeight: 560 }}>
+            <Text className="text-xl font-bold text-slate-800">Sign up</Text>
+            <Text className="mt-1 text-sm text-slate-400">Fill in the details below to get started.</Text>
+
+            <View className="mt-7 gap-5">
+              <Field label="Username">
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  autoCorrect={false}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-900"
+                  onChangeText={(v) => {
+                    clearErrors();
+                    setUsername(v);
+                  }}
+                  placeholder="Choose a username"
+                  placeholderTextColor="#94a3b8"
+                  returnKeyType="next"
+                  textContentType="username"
+                  value={username}
+                />
+              </Field>
+
+              <Field label="Email">
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-900"
+                  onChangeText={(v) => {
+                    clearErrors();
+                    setEmail(v);
+                  }}
+                  placeholder="your@email.com"
+                  placeholderTextColor="#94a3b8"
+                  returnKeyType="next"
+                  textContentType="emailAddress"
+                  value={email}
+                />
+              </Field>
+
+              <Field label="Password">
+                <TextInput
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  autoCorrect={false}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-900"
+                  onChangeText={(v) => {
+                    clearErrors();
+                    setPassword(v);
+                  }}
+                  placeholder="Create a password"
+                  placeholderTextColor="#94a3b8"
+                  returnKeyType="next"
+                  secureTextEntry
+                  textContentType="newPassword"
+                  value={password}
+                />
+              </Field>
+
+              <Field label="Confirm password">
+                <TextInput
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-base text-slate-900"
+                  onChangeText={(v) => {
+                    clearErrors();
+                    setConfirmPassword(v);
+                  }}
+                  onSubmitEditing={handleSignup}
+                  placeholder="Repeat your password"
+                  placeholderTextColor="#94a3b8"
+                  returnKeyType="go"
+                  secureTextEntry
+                  textContentType="newPassword"
+                  value={confirmPassword}
+                />
+              </Field>
+            </View>
+
+            {displayError ? (
+              <View className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                <Text className="text-xs font-semibold uppercase tracking-wider text-red-500">
+                  Error
+                </Text>
+                <Text className="mt-1 text-sm leading-5 text-red-700">{displayError}</Text>
+              </View>
+            ) : null}
+
+            <Pressable
+              className={`mt-6 items-center rounded-xl px-4 py-4 ${submitting ? 'bg-indigo-400' : 'bg-indigo-600'}`}
+              disabled={submitting}
+              onPress={handleSignup}>
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-base font-semibold text-white">Create account</Text>
+              )}
+            </Pressable>
+
+            <Pressable onPress={onSwitchToLogin} className="mt-5">
+              <Text className="text-center text-sm text-slate-500">
+                Already have an account?{' '}
+                <Text className="font-semibold text-indigo-600">Sign in</Text>
+              </Text>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -153,17 +182,11 @@ export function SignupScreen({ onSwitchToLogin }: { onSwitchToLogin: () => void 
   );
 }
 
-function StatusPanel({ label, value, tone }: { label: string; value: string; tone: string }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <View className="flex-row items-center justify-between gap-4 rounded-lg border border-stone-800 bg-pitch/50 p-3">
-      <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">{label}</Text>
-      <View
-        className={`rounded-full px-3 py-2 ${tone === 'amber' ? 'bg-amber-500/15' : 'bg-slate-500/15'}`}>
-        <Text
-          className={`text-[11px] font-medium uppercase tracking-[2px] ${tone === 'amber' ? 'text-amber-300' : 'text-slate-300'}`}>
-          {value}
-        </Text>
-      </View>
+    <View className="gap-2">
+      <Text className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</Text>
+      {children}
     </View>
   );
 }

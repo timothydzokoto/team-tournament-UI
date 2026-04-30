@@ -1,6 +1,13 @@
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Toast, ToastDescription, ToastTitle, useToast } from '@gluestack-ui/themed';
 
 import { SessionProvider, useSession } from '../context/SessionContext';
@@ -55,6 +62,37 @@ function createInitialStacks(): TabStacks {
   };
 }
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+type TransitionKind = 'tab' | 'push' | 'pop';
+
+function AnimatedScreen({
+  children,
+  kind,
+}: {
+  children: React.ReactNode;
+  kind: TransitionKind;
+}) {
+  const opacity = useSharedValue(0);
+  const translateX = useSharedValue(kind === 'push' ? SCREEN_WIDTH * 0.18 : 0);
+  const translateY = useSharedValue(kind === 'tab' ? 10 : kind === 'pop' ? -6 : 0);
+
+  useEffect(() => {
+    const easing = Easing.out(Easing.cubic);
+    opacity.value = withTiming(1, { duration: 230, easing });
+    translateX.value = withTiming(0, { duration: 230, easing });
+    translateY.value = withTiming(0, { duration: 230, easing });
+  }, [opacity, translateX, translateY]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    flex: 1,
+    opacity: opacity.value,
+    transform: [{ translateX: translateX.value }, { translateY: translateY.value }],
+  }));
+
+  return <Animated.View style={animStyle}>{children}</Animated.View>;
+}
+
 export function AppNavigator() {
   return (
     <SessionProvider>
@@ -66,6 +104,9 @@ export function AppNavigator() {
 function RootNavigation() {
   const { booting, token, user } = useSession();
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<RootTab>('Home');
   const [tabStacks, setTabStacks] = useState<TabStacks>(createInitialStacks);
   const [flashMessage, setFlashMessage] = useState<{
@@ -85,7 +126,7 @@ function RootNavigation() {
       return;
     }
 
-    toast.show({
+    toastRef.current.show({
       placement: 'top',
       duration: 2800,
       render: ({ id }) => (
@@ -101,7 +142,7 @@ function RootNavigation() {
 
     const timeoutId = setTimeout(() => setFlashMessage(null), 3000);
     return () => clearTimeout(timeoutId);
-  }, [flashMessage, toast]);
+  }, [flashMessage]);
 
   useEffect(() => {
     if (!token) {
@@ -115,6 +156,25 @@ function RootNavigation() {
   const currentRoute = currentStack[currentStack.length - 1] ?? { name: 'Home' as const };
   const canGoBack = currentStack.length > 1;
   const isImmersiveRoute = currentRoute.name === 'LiveCapture';
+
+  const routeKey = `${activeTab}-${currentRoute.name}`;
+  const prevActiveTabRef = useRef(activeTab);
+  const prevStackLengthRef = useRef(currentStack.length);
+  const prevRouteKeyRef = useRef(routeKey);
+  const transitionKindRef = useRef<TransitionKind>('tab');
+
+  if (routeKey !== prevRouteKeyRef.current) {
+    if (activeTab !== prevActiveTabRef.current) {
+      transitionKindRef.current = 'tab';
+    } else if (currentStack.length > prevStackLengthRef.current) {
+      transitionKindRef.current = 'push';
+    } else {
+      transitionKindRef.current = 'pop';
+    }
+    prevRouteKeyRef.current = routeKey;
+    prevActiveTabRef.current = activeTab;
+    prevStackLengthRef.current = currentStack.length;
+  }
 
   if (booting) {
     return (
@@ -357,33 +417,35 @@ function RootNavigation() {
   if (isImmersiveRoute) {
     return (
       <View className="flex-1 bg-black">
-        {renderRoute({
-          activeTab,
-          currentRoute,
-          routeStack: tabStacks[activeTab],
-          goBack,
-          openHome: () => switchTab('Home'),
-          openTeams: () => switchTab('Teams'),
-          openVerify: () => switchTab('Verify'),
-          openActivity: () =>
-            setTabStacks((current) => ({
-              ...current,
-              Activity: [{ name: 'Activity', params: { refreshKey: Date.now() } }],
-            })),
-          openProfile: () => switchTab('Profile'),
-          push,
-          pendingCapture,
-          setPendingCapture,
-          openCreatedTeam,
-          openCreatedSubteam,
-          openCreatedPlayer,
-          applyUpdatedTeam,
-          applyUpdatedSubteam,
-          applyUpdatedPlayer,
-          handleDeleteTeam,
-          handleDeleteSubteam,
-          handleDeletePlayer,
-        })}
+        <AnimatedScreen key={routeKey} kind={transitionKindRef.current}>
+          {renderRoute({
+            activeTab,
+            currentRoute,
+            routeStack: tabStacks[activeTab],
+            goBack,
+            openHome: () => switchTab('Home'),
+            openTeams: () => switchTab('Teams'),
+            openVerify: () => switchTab('Verify'),
+            openActivity: () =>
+              setTabStacks((current) => ({
+                ...current,
+                Activity: [{ name: 'Activity', params: { refreshKey: Date.now() } }],
+              })),
+            openProfile: () => switchTab('Profile'),
+            push,
+            pendingCapture,
+            setPendingCapture,
+            openCreatedTeam,
+            openCreatedSubteam,
+            openCreatedPlayer,
+            applyUpdatedTeam,
+            applyUpdatedSubteam,
+            applyUpdatedPlayer,
+            handleDeleteTeam,
+            handleDeleteSubteam,
+            handleDeletePlayer,
+          })}
+        </AnimatedScreen>
       </View>
     );
   }
@@ -428,7 +490,7 @@ function RootNavigation() {
         </View>
       </View>
 
-      <View className="flex-1">
+      <AnimatedScreen key={routeKey} kind={transitionKindRef.current}>
         {renderRoute({
           activeTab,
           currentRoute,
@@ -456,10 +518,26 @@ function RootNavigation() {
           handleDeleteSubteam,
           handleDeletePlayer,
         })}
-      </View>
+      </AnimatedScreen>
 
-      <View className="border-t border-[#1e293b] bg-[#030514] shadow-[0_-10px_28px_rgba(0,0,0,0.45)]">
-        <View className="mx-auto w-full max-w-[1120px] flex-row items-center justify-around px-4 py-3">
+      <View
+        style={{
+          backgroundColor: '#0d1424',
+          borderTopWidth: 1,
+          borderTopColor: '#1e2a45',
+        }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            justifyContent: 'space-around',
+            paddingHorizontal: 8,
+            paddingTop: 6,
+            paddingBottom: Math.max(insets.bottom, 10),
+            maxWidth: 1120,
+            alignSelf: 'center',
+            width: '100%',
+          }}>
           {(
             [
               { label: TAB_LABELS.Home, icon: 'home', tab: 'Home' },
@@ -475,57 +553,87 @@ function RootNavigation() {
             }[]
           ).map(({ label, icon, tab, center }) => {
             const isActive = activeTab === tab;
+            function handlePress() {
+              if (tab === 'Activity') {
+                replaceTabRoot('Activity', {
+                  name: 'Activity',
+                  params: { refreshKey: Date.now() },
+                });
+              }
+              switchTab(tab);
+            }
+
+            if (center) {
+              return (
+                <Pressable
+                  key={tab}
+                  onPress={handlePress}
+                  hitSlop={6}
+                  style={{ alignItems: 'center', marginTop: -22 }}>
+                  <View
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: isActive ? '#2563eb' : '#1e3a8a',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 3,
+                      borderColor: '#0d1424',
+                      shadowColor: '#3b82f6',
+                      shadowOffset: { width: 0, height: -3 },
+                      shadowOpacity: isActive ? 0.6 : 0.2,
+                      shadowRadius: 10,
+                      elevation: 10,
+                    }}>
+                    <Ionicons name="camera" size={26} color="#fff" />
+                  </View>
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: '600',
+                      color: isActive ? '#60a5fa' : '#64748b',
+                      marginTop: 5,
+                    }}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            }
+
             return (
               <Pressable
                 key={tab}
-                onPress={() => {
-                  if (tab === 'Activity') {
-                    replaceTabRoot('Activity', {
-                      name: 'Activity',
-                      params: { refreshKey: Date.now() },
-                    });
+                onPress={handlePress}
+                hitSlop={8}
+                style={{ alignItems: 'center', paddingHorizontal: 12, paddingBottom: 2 }}>
+                <Ionicons
+                  name={
+                    isActive
+                      ? (icon as keyof typeof Ionicons.glyphMap)
+                      : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
                   }
-                  switchTab(tab);
-                }}
-                className="items-center justify-center">
-                <View
-                  className={`items-center justify-center rounded-full ${center ? 'p-0.5' : 'p-1'}`}
-                  style={{
-                    backgroundColor: center ? 'transparent' : '#0a1226',
-                    shadowColor: isActive ? 'rgba(103, 131, 255, 0.72)' : 'rgba(0, 0, 0, 0.25)',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: isActive ? 1 : 0.5,
-                    shadowRadius: isActive ? 12 : 5,
-                  }}>
-                  <View
-                    className="items-center justify-center rounded-full"
-                    style={{
-                      width: center ? 62 : 48,
-                      height: center ? 62 : 48,
-                      backgroundColor: isActive ? '#0c1832' : '#111b33',
-                      borderRadius: 999,
-                      padding: center ? 2 : 0,
-                    }}>
-                    <Ionicons
-                      name={
-                        isActive
-                          ? (`${icon}` as keyof typeof Ionicons.glyphMap)
-                          : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
-                      }
-                      size={center ? 30 : 22}
-                      color={isActive ? '#fff' : '#9ca3af'}
-                      style={{
-                        textShadowColor: isActive ? 'rgba(96, 165, 250, 0.85)' : 'transparent',
-                        textShadowOffset: { width: 0, height: 0 },
-                        textShadowRadius: isActive ? 8 : 0,
-                      }}
-                    />
-                  </View>
-                </View>
+                  size={22}
+                  color={isActive ? '#60a5fa' : '#64748b'}
+                />
                 <Text
-                  className={`mt-1 text-[11px] font-semibold ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                  style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    color: isActive ? '#60a5fa' : '#64748b',
+                    marginTop: 3,
+                  }}>
                   {label}
                 </Text>
+                <View
+                  style={{
+                    marginTop: 4,
+                    height: 3,
+                    width: 3,
+                    borderRadius: 2,
+                    backgroundColor: isActive ? '#3b82f6' : 'transparent',
+                  }}
+                />
               </Pressable>
             );
           })}

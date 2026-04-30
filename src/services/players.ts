@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config/api';
-import { ApiError, apiRequest } from './api';
+import { ApiError, apiRequest, getPageItems, type PageResponse } from './api';
 
 export type Player = {
   id: number;
@@ -43,16 +43,21 @@ export type PlayerCreateInput = {
 export type PlayerUpdateInput = PlayerCreateInput;
 
 export async function getPlayers(token: string, subteamId: number, search?: string) {
-  const params = new URLSearchParams({ subteam_id: String(subteamId) });
+  const params = new URLSearchParams({ skip: '0', limit: '100', subteam_id: String(subteamId) });
 
   if (search?.trim()) {
     params.set('search', search.trim());
   }
 
-  return apiRequest<Player[]>(`/players?${params.toString()}`, {
-    method: 'GET',
-    token,
-  });
+  const payload = await apiRequest<Player[] | PageResponse<Player>>(
+    `/players?${params.toString()}`,
+    {
+      method: 'GET',
+      token,
+    }
+  );
+
+  return getPageItems(payload);
 }
 
 export async function getPlayer(token: string, playerId: number) {
