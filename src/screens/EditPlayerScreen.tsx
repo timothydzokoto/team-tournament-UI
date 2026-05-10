@@ -3,19 +3,18 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Switch,
   Text,
   View,
 } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../services/api';
 import { getPlayer, type Player, updatePlayer } from '../services/players';
@@ -143,124 +142,128 @@ export function EditPlayerScreen({ playerId, subteamId, onSaved }: Props) {
   }
 
   return (
-    <AppScreen
-      accent="violet"
-      hero={
-        <HeroPanel
-          accent="violet"
-          eyebrow="Edit"
-          title="Update player"
-          description="Adjust player metadata without disturbing the face enrollment flow."
-          aside={<StatusBadge label={`Player #${playerId}`} tone="violet" />}
-        />
-      }>
+    <WorkflowScreen
+      badgeLabel={`Player #${playerId}`}
+      badgeTone="violet"
+      title="Update player"
+      description="Adjust player metadata without disturbing the face enrollment flow.">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SurfaceCard eyebrow="Player form" title="Edit player record">
+        <WorkflowSection eyebrow="Player form" title="Edit player record">
           {loading ? (
-            <View className="items-center py-10">
-              <ActivityIndicator color="#8b5cf6" />
-              <Text className="mt-3 text-sm text-stone-400">Loading player...</Text>
+            <View className="items-center rounded-2xl border border-slate-200 bg-slate-50 py-10">
+              <ActivityIndicator color="#10b981" />
+              <Text className="mt-3 text-sm text-slate-500">Loading player...</Text>
             </View>
           ) : (
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View className="gap-4">
-                <AppInput
-                  label="First name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="Ama"
-                  autoCapitalize="words"
-                  errorText={didAttemptSubmit ? firstNameError : null}
-                />
-                <AppInput
-                  label="Last name"
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="Owusu"
-                  autoCapitalize="words"
-                  errorText={didAttemptSubmit ? lastNameError : null}
-                />
-                <AppInput
-                  label="Position"
-                  value={position}
-                  onChangeText={setPosition}
-                  placeholder="Forward"
-                  autoCapitalize="words"
-                />
-                <AppInput
-                  label="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="player@example.com"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                />
-                <AppInput
-                  label="Phone"
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="+233 20 000 0000"
-                  keyboardType="phone-pad"
-                />
-                <AppInput
-                  label="Jersey number"
-                  value={jerseyNumber}
-                  onChangeText={setJerseyNumber}
-                  placeholder="9"
-                  keyboardType="number-pad"
-                />
-                <AppInput
-                  label="Height (cm)"
-                  value={height}
-                  onChangeText={setHeight}
-                  placeholder="178"
-                  keyboardType="decimal-pad"
-                />
-                <AppInput
-                  label="Weight (kg)"
-                  value={weight}
-                  onChangeText={setWeight}
-                  placeholder="72"
-                  keyboardType="decimal-pad"
-                />
-                <AppInput
-                  label="Date of birth"
-                  value={dateOfBirth}
-                  onChangeText={setDateOfBirth}
-                  placeholder="2001-09-25"
-                  autoCapitalize="none"
-                  helperText="Optional. Use YYYY-MM-DD format."
-                />
-                <View className="rounded-[22px] border border-stone-800 bg-pitch px-4 py-4">
-                  <View className="flex-row items-center justify-between gap-4">
-                    <View className="flex-1">
-                      <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">
-                        Active status
-                      </Text>
-                      <Text className="mt-2 text-sm leading-6 text-stone-300">
-                        Keep this on for players currently active in the roster.
-                      </Text>
-                    </View>
-                    <Switch value={isActive} onValueChange={setIsActive} thumbColor="#f59e0b" />
-                  </View>
+            <View className="gap-4">
+              <View className="gap-4 md:flex-row">
+                <View className="flex-1">
+                  <WorkflowInput
+                    label="First name"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    placeholder="Ama"
+                    autoCapitalize="words"
+                    errorText={didAttemptSubmit ? firstNameError : null}
+                  />
                 </View>
-                {submitError ? (
-                  <FeedbackState title="Update failed" message={submitError} tone="error" />
-                ) : null}
-                <AppButton
-                  label="Save player"
-                  onPress={handleSubmit}
-                  variant="primary"
-                  loading={submitting}
-                  disabled={submitting || !firstName.trim() || !lastName.trim()}
-                />
+                <View className="flex-1">
+                  <WorkflowInput
+                    label="Last name"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    placeholder="Owusu"
+                    autoCapitalize="words"
+                    errorText={didAttemptSubmit ? lastNameError : null}
+                  />
+                </View>
               </View>
-            </ScrollView>
+              <WorkflowInput
+                label="Position"
+                value={position}
+                onChangeText={setPosition}
+                placeholder="Forward"
+                autoCapitalize="words"
+              />
+              <WorkflowInput
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="player@example.com"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+              <WorkflowInput
+                label="Phone"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+233 20 000 0000"
+                keyboardType="phone-pad"
+              />
+              <View className="gap-4 md:flex-row">
+                <View className="flex-1">
+                  <WorkflowInput
+                    label="Jersey number"
+                    value={jerseyNumber}
+                    onChangeText={setJerseyNumber}
+                    placeholder="9"
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View className="flex-1">
+                  <WorkflowInput
+                    label="Height (cm)"
+                    value={height}
+                    onChangeText={setHeight}
+                    placeholder="178"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+              <WorkflowInput
+                label="Weight (kg)"
+                value={weight}
+                onChangeText={setWeight}
+                placeholder="72"
+                keyboardType="decimal-pad"
+              />
+              <WorkflowInput
+                label="Date of birth"
+                value={dateOfBirth}
+                onChangeText={setDateOfBirth}
+                placeholder="2001-09-25"
+                autoCapitalize="none"
+                helperText="Optional. Use YYYY-MM-DD format."
+              />
+              <View className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <View className="flex-row items-center justify-between gap-4">
+                  <View className="flex-1">
+                    <Text className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Active status
+                    </Text>
+                    <Text className="mt-2 text-sm leading-6 text-slate-500">
+                      Keep this on for players currently active in the roster.
+                    </Text>
+                  </View>
+                  <Switch value={isActive} onValueChange={setIsActive} thumbColor="#10b981" />
+                </View>
+              </View>
+              {submitError ? (
+                <WorkflowFeedback title="Update failed" message={submitError} tone="error" />
+              ) : null}
+              <WorkflowButton
+                label="Save player"
+                onPress={handleSubmit}
+                tone="emerald"
+                loading={submitting}
+                disabled={submitting || !firstName.trim() || !lastName.trim()}
+              />
+            </View>
           )}
-        </SurfaceCard>
+        </WorkflowSection>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </WorkflowScreen>
   );
 }
 

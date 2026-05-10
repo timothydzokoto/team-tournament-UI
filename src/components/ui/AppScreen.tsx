@@ -17,7 +17,7 @@ const accentMap = {
 
 export function AppScreen({ accent = 'amber', hero, children }: AppScreenProps) {
   return (
-    <SafeAreaView className="flex-1 bg-pitch">
+    <SafeAreaView className="flex-1 bg-pitch" edges={['left', 'right']}>
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
         <View className="absolute left-[-40px] top-10 h-40 w-40 rounded-full bg-amber-500/10" />
         <View className="absolute right-[-22px] top-36 h-28 w-28 rounded-full bg-sky-500/10" />

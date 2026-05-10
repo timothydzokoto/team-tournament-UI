@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { DetailRow } from '../components/ui/DetailRow';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { getConnectivityMessage } from '../services/api';
 import { getPlayers, type Player } from '../services/players';
@@ -99,35 +99,39 @@ export function SubteamDetailScreen({
   }
 
   return (
-    <AppScreen
-      accent="violet"
-      hero={
-        <HeroPanel
-          accent="violet"
-          eyebrow="Subteam"
-          title={subteamName}
-          description="Open a player profile to review metadata and manage face enrollment from one place."
-          aside={
-            <View className="gap-3 md:items-end">
-              <StatusBadge label={`Subteam #${subteamId}`} tone="violet" />
-              <AppButton label="Edit subteam" onPress={onEditSubteam} variant="secondary" />
-            </View>
-          }
-        />
+    <WorkflowScreen
+      badgeLabel={`Subteam #${subteamId}`}
+      badgeTone="violet"
+      title={subteamName}
+      description="Open a player profile to review metadata and manage face enrollment from one place."
+      heroActions={
+        <View className="flex-row flex-wrap gap-3">
+          <WorkflowButton label="Edit subteam" onPress={onEditSubteam} />
+          <WorkflowButton label="New player" onPress={onCreatePlayer} />
+        </View>
       }>
-      <SurfaceCard
-        eyebrow="Players"
-        title="Registered roster"
-        action={
-          <View className="flex-row gap-2">
-            {token ? (
-              <AppButton label="Refresh" onPress={() => loadPlayers(token)} variant="ghost" />
-            ) : null}
-            <AppButton label="New player" onPress={onCreatePlayer} variant="primary" />
-          </View>
-        }>
+      <WorkflowSection eyebrow="Actions" title="Subteam controls">
+        <View className="gap-3 md:flex-row">
+          <ActionCard
+            title="Edit subteam"
+            description="Update this subteam’s name or description."
+            actionLabel="Open edit form"
+            tone="sky"
+            onPress={onEditSubteam}
+          />
+          <ActionCard
+            title="Create player"
+            description="Add a player to this roster before enrolling a face image."
+            actionLabel="New player"
+            tone="emerald"
+            onPress={onCreatePlayer}
+          />
+        </View>
+      </WorkflowSection>
+
+      <WorkflowSection eyebrow="Players" title="Registered roster">
         <View className="mb-4 gap-3">
-          <AppInput
+          <WorkflowInput
             label="Search players"
             value={search}
             onChangeText={setSearch}
@@ -137,50 +141,60 @@ export function SubteamDetailScreen({
             helperText="Search runs against the backend player endpoint for this subteam."
           />
           <View className="flex-row flex-wrap gap-2">
-            <AppButton
+            <FilterButton
               label="All players"
+              selected={faceFilter === 'all'}
               onPress={() => setFaceFilter('all')}
-              variant={faceFilter === 'all' ? 'primary' : 'ghost'}
             />
-            <AppButton
+            <FilterButton
               label="Face uploaded"
+              selected={faceFilter === 'with_face'}
               onPress={() => setFaceFilter('with_face')}
-              variant={faceFilter === 'with_face' ? 'primary' : 'ghost'}
             />
-            <AppButton
+            <FilterButton
               label="Face missing"
+              selected={faceFilter === 'without_face'}
               onPress={() => setFaceFilter('without_face')}
-              variant={faceFilter === 'without_face' ? 'primary' : 'ghost'}
             />
           </View>
-          <AppButton
-            label={confirmDelete ? 'Cancel delete' : 'Delete subteam'}
-            onPress={() => {
-              setConfirmDelete((current) => !current);
-              setDeleteError(null);
-            }}
-            variant={confirmDelete ? 'ghost' : 'danger'}
-            disabled={deleting}
-          />
+          <View className="flex-row flex-wrap gap-3">
+            {token ? (
+              <WorkflowButton
+                label={loading ? 'Refreshing' : 'Refresh'}
+                onPress={() => loadPlayers(token)}
+                disabled={loading}
+              />
+            ) : null}
+            <WorkflowButton label="New player" onPress={onCreatePlayer} tone="emerald" />
+            <WorkflowButton
+              label={confirmDelete ? 'Cancel delete' : 'Delete subteam'}
+              onPress={() => {
+                setConfirmDelete((current) => !current);
+                setDeleteError(null);
+              }}
+              tone={confirmDelete ? 'neutral' : 'danger'}
+              disabled={deleting}
+            />
+          </View>
           {confirmDelete ? (
-            <View className="rounded-[24px] border border-rose-500/20 bg-rose-500/10 p-4">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-rose-200">
+            <View className="rounded-2xl border border-red-100 bg-red-50 p-4">
+              <Text className="text-xs font-semibold uppercase tracking-wider text-red-500">
                 Confirm deletion
               </Text>
-              <Text className="mt-2 text-sm leading-6 text-rose-100">
+              <Text className="mt-2 text-sm leading-6 text-red-700">
                 Delete this subteam and return to the parent team. Use this only when the roster
                 grouping should be removed.
               </Text>
               {deleteError ? (
                 <View className="mt-3">
-                  <FeedbackState title="Delete failed" message={deleteError} tone="error" />
+                  <WorkflowFeedback title="Delete failed" message={deleteError} tone="error" />
                 </View>
               ) : null}
-              <View className="mt-4 gap-3">
-                <AppButton
+              <View className="mt-4">
+                <WorkflowButton
                   label="Confirm subteam deletion"
                   onPress={handleDelete}
-                  variant="danger"
+                  tone="danger"
                   loading={deleting}
                   disabled={deleting}
                 />
@@ -188,28 +202,25 @@ export function SubteamDetailScreen({
             </View>
           ) : null}
         </View>
+
         {loading ? (
-          <View className="items-center py-10">
-            <ActivityIndicator color="#8b5cf6" />
-            <Text className="mt-3 text-sm text-stone-400">Loading players...</Text>
+          <View className="items-center rounded-2xl border border-slate-200 bg-slate-50 py-10">
+            <ActivityIndicator color="#10b981" />
+            <Text className="mt-3 text-sm text-slate-500">Loading players...</Text>
           </View>
         ) : error ? (
           <View className="gap-3">
-            <FeedbackState
+            <WorkflowFeedback
               title={isConnectivityErrorMessage(error) ? 'Roster unavailable' : 'Load failed'}
               message={error}
               tone="error"
             />
             {token ? (
-              <AppButton
-                label="Retry player load"
-                onPress={() => loadPlayers(token)}
-                variant="secondary"
-              />
+              <WorkflowButton label="Retry player load" onPress={() => loadPlayers(token)} />
             ) : null}
           </View>
         ) : visiblePlayers.length === 0 ? (
-          <FeedbackState
+          <WorkflowFeedback
             title={
               debouncedSearch.trim() || faceFilter !== 'all'
                 ? 'No player matches'
@@ -238,46 +249,104 @@ export function SubteamDetailScreen({
             ))}
           </View>
         )}
-      </SurfaceCard>
-    </AppScreen>
+      </WorkflowSection>
+    </WorkflowScreen>
   );
+}
+
+function ActionCard({
+  actionLabel,
+  description,
+  onPress,
+  title,
+  tone,
+}: {
+  actionLabel: string;
+  description: string;
+  onPress: () => void;
+  title: string;
+  tone: 'emerald' | 'sky';
+}) {
+  const barColor = { emerald: 'bg-emerald-500', sky: 'bg-sky-500' }[tone];
+  const buttonTone = tone === 'emerald' ? 'emerald' : 'neutral';
+
+  return (
+    <View className="flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className={`h-[3px] w-full ${barColor}`} />
+      <View className="p-5">
+        <StatusBadge label={tone === 'emerald' ? 'Roster' : 'Management'} tone={tone} />
+        <Text className="mt-4 text-lg font-semibold text-slate-800">{title}</Text>
+        <Text className="mt-2 text-sm leading-6 text-slate-500">{description}</Text>
+        <View className="mt-5">
+          <WorkflowButton label={actionLabel} onPress={onPress} tone={buttonTone} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function FilterButton({
+  label,
+  onPress,
+  selected,
+}: {
+  label: string;
+  onPress: () => void;
+  selected: boolean;
+}) {
+  return <WorkflowButton label={label} onPress={onPress} tone={selected ? 'emerald' : 'neutral'} />;
 }
 
 function PlayerCard({ player, onPress }: { player: Player; onPress: () => void }) {
   return (
-    <View className="overflow-hidden rounded-[26px] border border-stone-800 bg-pitch">
-      <View className="border-b border-stone-800 px-4 py-4">
+    <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className="h-[3px] w-full bg-violet-500" />
+      <View className="p-4">
         <View className="flex-row items-start justify-between gap-4">
           <View className="flex-1">
-            <Text className="text-base font-semibold text-fog">
+            <Text className="text-base font-semibold text-slate-800">
               {player.first_name} {player.last_name}
             </Text>
-            <Text className="mt-1 text-sm leading-6 text-stone-300">
+            <Text className="mt-1 text-sm leading-6 text-slate-500">
               {player.position || 'Position not set'}
             </Text>
           </View>
           <StatusBadge label={`#${player.jersey_number ?? '--'}`} tone="violet" />
         </View>
-      </View>
 
-      <View className="gap-3 px-4 py-4">
-        <DetailRow
-          label="Email"
-          value={player.email || 'No email'}
-          valueTone={player.email ? 'default' : 'muted'}
-        />
-        <DetailRow
-          label="Phone"
-          value={player.phone || 'No phone'}
-          valueTone={player.phone ? 'default' : 'muted'}
-        />
-        <DetailRow
-          label="Face profile"
-          value={player.face_image_url ? 'Uploaded' : 'Not uploaded'}
-          valueTone={player.face_image_url ? 'positive' : 'muted'}
-        />
-        <AppButton label="Open player" onPress={onPress} variant="secondary" />
+        <View className="mt-4 gap-3">
+          <DetailField label="Email" value={player.email || 'No email'} muted={!player.email} />
+          <DetailField label="Phone" value={player.phone || 'No phone'} muted={!player.phone} />
+          <DetailField
+            label="Face profile"
+            value={player.face_image_url ? 'Uploaded' : 'Not uploaded'}
+            positive={Boolean(player.face_image_url)}
+            muted={!player.face_image_url}
+          />
+          <WorkflowButton label="Open player" onPress={onPress} tone="emerald" />
+        </View>
       </View>
+    </View>
+  );
+}
+
+function DetailField({
+  label,
+  muted,
+  positive,
+  value,
+}: {
+  label: string;
+  muted?: boolean;
+  positive?: boolean;
+  value: string;
+}) {
+  const valueClass = positive ? 'text-emerald-600' : muted ? 'text-slate-400' : 'text-slate-700';
+
+  return (
+    <View className="flex-row items-center justify-between gap-4">
+      <Text className="text-xs uppercase tracking-[1px] text-slate-400">{label}</Text>
+      <Text className={`text-sm ${valueClass}`}>{value}</Text>
     </View>
   );
 }

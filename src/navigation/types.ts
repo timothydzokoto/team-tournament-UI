@@ -83,7 +83,7 @@ export type AppRoute =
       };
     }
   | {
-      name: 'Activity';
+      name: 'Match';
       params: {
         refreshKey: number;
       };

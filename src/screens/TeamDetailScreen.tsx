@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { getConnectivityMessage } from '../services/api';
 import { getSubteams, type Subteam } from '../services/subteams';
@@ -85,35 +86,43 @@ export function TeamDetailScreen({
   }
 
   return (
-    <AppScreen
-      accent="sky"
-      hero={
-        <HeroPanel
-          accent="sky"
-          eyebrow="Team"
-          title={teamName}
-          description="Choose a subteam to continue into player rosters and individual face profiles."
-          aside={
-            <View className="gap-3 md:items-end">
-              <StatusBadge label={`Team #${teamId}`} tone="sky" />
-              <AppButton label="Edit team" onPress={onEditTeam} variant="secondary" />
-            </View>
-          }
-        />
+    <WorkflowScreen
+      badgeLabel={`Team #${teamId}`}
+      badgeTone="sky"
+      title={teamName}
+      description="Manage this team’s subteams and team-level actions from one focused view."
+      heroActions={
+        <View className="flex-row flex-wrap gap-3">
+          <HeroButton label="Edit team" onPress={onEditTeam} />
+          <HeroButton label="New subteam" onPress={onCreateSubteam} />
+        </View>
       }>
-      <SurfaceCard
-        eyebrow="Subteams"
-        title="Available groups"
-        action={
-          <View className="flex-row gap-2">
-            {token ? (
-              <AppButton label="Refresh" onPress={() => loadSubteams(token)} variant="ghost" />
-            ) : null}
-            <AppButton label="New subteam" onPress={onCreateSubteam} variant="primary" />
+      <WorkflowSection eyebrow="Actions" title="Team controls">
+        <View className="gap-3 md:flex-row">
+          <View className="flex-1">
+            <ActionCard
+              title="Edit team"
+              description="Update the team name, description, coach, or logo URL."
+              actionLabel="Open edit form"
+              tone="emerald"
+              onPress={onEditTeam}
+            />
           </View>
-        }>
+          <View className="flex-1">
+            <ActionCard
+              title="Create subteam"
+              description="Add a group under this team before adding player rosters."
+              actionLabel="New subteam"
+              tone="sky"
+              onPress={onCreateSubteam}
+            />
+          </View>
+        </View>
+      </WorkflowSection>
+
+      <WorkflowSection eyebrow="Subteams" title="Available groups">
         <View className="mb-4 gap-3">
-          <AppInput
+          <WorkflowInput
             label="Search subteams"
             value={search}
             onChangeText={setSearch}
@@ -122,34 +131,44 @@ export function TeamDetailScreen({
             autoCorrect={false}
             helperText="Search is scoped to this team."
           />
-          <AppButton
-            label={confirmDelete ? 'Cancel delete' : 'Delete team'}
-            onPress={() => {
-              setConfirmDelete((current) => !current);
-              setDeleteError(null);
-            }}
-            variant={confirmDelete ? 'ghost' : 'danger'}
-            disabled={deleting}
-          />
+          <View className="flex-row flex-wrap gap-3">
+            {token ? (
+              <WorkflowButton
+                label={loading ? 'Refreshing' : 'Refresh'}
+                onPress={() => loadSubteams(token)}
+                disabled={loading}
+              />
+            ) : null}
+            <WorkflowButton label="New subteam" onPress={onCreateSubteam} tone="emerald" />
+            <WorkflowButton
+              label={confirmDelete ? 'Cancel delete' : 'Delete team'}
+              onPress={() => {
+                setConfirmDelete((current) => !current);
+                setDeleteError(null);
+              }}
+              tone={confirmDelete ? 'neutral' : 'danger'}
+              disabled={deleting}
+            />
+          </View>
           {confirmDelete ? (
-            <View className="rounded-[24px] border border-rose-500/20 bg-rose-500/10 p-4">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-rose-200">
+            <View className="rounded-2xl border border-red-100 bg-red-50 p-4">
+              <Text className="text-xs font-semibold uppercase tracking-wider text-red-500">
                 Confirm deletion
               </Text>
-              <Text className="mt-2 text-sm leading-6 text-rose-100">
-                Delete this team and return to the teams dashboard. Use this only when you are sure
-                the record should be removed.
+              <Text className="mt-2 text-sm leading-6 text-red-700">
+                Delete this team and return to the teams dashboard. Use this only when the record
+                should be removed.
               </Text>
               {deleteError ? (
                 <View className="mt-3">
-                  <FeedbackState title="Delete failed" message={deleteError} tone="error" />
+                  <WorkflowFeedback title="Delete failed" message={deleteError} tone="error" />
                 </View>
               ) : null}
-              <View className="mt-4 gap-3">
-                <AppButton
+              <View className="mt-4">
+                <WorkflowButton
                   label="Confirm team deletion"
                   onPress={handleDelete}
-                  variant="danger"
+                  tone="danger"
                   loading={deleting}
                   disabled={deleting}
                 />
@@ -157,28 +176,25 @@ export function TeamDetailScreen({
             </View>
           ) : null}
         </View>
+
         {loading ? (
-          <View className="items-center py-10">
-            <ActivityIndicator color="#38bdf8" />
-            <Text className="mt-3 text-sm text-stone-400">Loading subteams...</Text>
+          <View className="items-center rounded-2xl border border-slate-200 bg-slate-50 py-10">
+            <ActivityIndicator color="#10b981" />
+            <Text className="mt-3 text-sm text-slate-500">Loading subteams...</Text>
           </View>
         ) : error ? (
           <View className="gap-3">
-            <FeedbackState
+            <WorkflowFeedback
               title={isConnectivityErrorMessage(error) ? 'Subteams unavailable' : 'Load failed'}
               message={error}
               tone="error"
             />
             {token ? (
-              <AppButton
-                label="Retry subteam load"
-                onPress={() => loadSubteams(token)}
-                variant="secondary"
-              />
+              <WorkflowButton label="Retry subteam load" onPress={() => loadSubteams(token)} />
             ) : null}
           </View>
         ) : subteams.length === 0 ? (
-          <FeedbackState
+          <WorkflowFeedback
             title={debouncedSearch.trim() ? 'No subteam matches' : 'No subteams yet'}
             message={
               debouncedSearch.trim()
@@ -202,28 +218,64 @@ export function TeamDetailScreen({
             ))}
           </View>
         )}
-      </SurfaceCard>
-    </AppScreen>
+      </WorkflowSection>
+    </WorkflowScreen>
+  );
+}
+
+function HeroButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return <WorkflowButton label={label} onPress={onPress} tone="neutral" />;
+}
+
+function ActionCard({
+  actionLabel,
+  description,
+  onPress,
+  title,
+  tone,
+}: {
+  actionLabel: string;
+  description: string;
+  onPress: () => void;
+  title: string;
+  tone: 'emerald' | 'sky';
+}) {
+  const barColor = { emerald: 'bg-emerald-500', sky: 'bg-sky-500' }[tone];
+  const buttonTone = tone === 'emerald' ? 'emerald' : 'neutral';
+
+  return (
+    <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className={`h-[3px] w-full ${barColor}`} />
+      <View className="p-5">
+        <StatusBadge label={tone === 'emerald' ? 'Management' : 'Setup'} tone={tone} />
+        <Text className="mt-4 text-lg font-semibold text-slate-800">{title}</Text>
+        <Text className="mt-2 text-sm leading-6 text-slate-500">{description}</Text>
+        <View className="mt-5">
+          <WorkflowButton label={actionLabel} onPress={onPress} tone={buttonTone} />
+        </View>
+      </View>
+    </View>
   );
 }
 
 function SubteamCard({ subteam, onPress }: { subteam: Subteam; onPress: () => void }) {
   return (
-    <View className="overflow-hidden rounded-[26px] border border-stone-800 bg-pitch">
-      <View className="border-b border-stone-800 px-4 py-4">
+    <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className="h-[3px] w-full bg-sky-500" />
+      <View className="p-4">
         <View className="flex-row items-start justify-between gap-4">
           <View className="flex-1">
-            <Text className="text-base font-semibold text-fog">{subteam.name}</Text>
-            <Text className="mt-1 text-sm leading-6 text-stone-300">
+            <Text className="text-base font-semibold text-slate-800">{subteam.name}</Text>
+            <Text className="mt-1 text-sm leading-6 text-slate-500">
               {subteam.description || 'No description provided.'}
             </Text>
           </View>
           <StatusBadge label={`#${subteam.id}`} tone="sky" />
         </View>
-      </View>
 
-      <View className="px-4 py-4">
-        <AppButton label="Open subteam" onPress={onPress} variant="secondary" />
+        <View className="mt-4">
+          <WorkflowButton label="Open subteam" onPress={onPress} tone="emerald" />
+        </View>
       </View>
     </View>
   );

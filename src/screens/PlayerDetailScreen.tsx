@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppScreen } from '../components/ui/AppScreen';
-import { DetailRow } from '../components/ui/DetailRow';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import type { CaptureAsset } from '../navigation/types';
 import { ApiError, getFaceFlowErrorMessage } from '../services/api';
@@ -190,62 +190,52 @@ export function PlayerDetailScreen({
   }
 
   return (
-    <AppScreen
-      accent="amber"
-      hero={
-        <HeroPanel
-          accent="amber"
-          eyebrow="Player"
-          title={playerName}
-          description="Review player details, confirm whether face enrollment already exists, and upload a fresh face image when needed."
-          aside={
-            <View className="gap-3 md:items-end">
-              <StatusBadge label={`Player #${playerId}`} tone="amber" />
-              {canManagePlayer ? (
-                <AppButton label="Edit player" onPress={onEditPlayer} variant="secondary" />
-              ) : null}
-            </View>
-          }
-        />
+    <WorkflowScreen
+      badgeLabel={`Player #${playerId}`}
+      badgeTone="amber"
+      title={playerName}
+      description="Review player details, manage face enrollment, and update the roster record when needed."
+      heroActions={
+        canManagePlayer ? <HeroButton label="Edit player" onPress={onEditPlayer} /> : null
       }>
-      <SurfaceCard
+      <WorkflowSection
         eyebrow="Profile"
         title="Player details"
         action={
           token ? (
-            <AppButton label="Refresh" onPress={() => loadPlayer(token)} variant="ghost" />
+            <WorkflowButton label="Refresh" onPress={() => loadPlayer(token)} disabled={loading} />
           ) : null
         }>
         {canManagePlayer ? (
           <View className="mb-4 gap-3">
-            <AppButton
+            <WorkflowButton
               label={confirmDelete ? 'Cancel delete' : 'Delete player'}
               onPress={() => {
                 setConfirmDelete((current) => !current);
                 setDeleteError(null);
               }}
-              variant={confirmDelete ? 'ghost' : 'danger'}
+              tone={confirmDelete ? 'neutral' : 'danger'}
               disabled={deleting}
             />
             {confirmDelete ? (
-              <View className="rounded-[24px] border border-rose-500/20 bg-rose-500/10 p-4">
-                <Text className="text-xs font-medium uppercase tracking-[2px] text-rose-200">
+              <View className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                <Text className="text-xs font-semibold uppercase tracking-wider text-red-500">
                   Confirm deletion
                 </Text>
-                <Text className="mt-2 text-sm leading-6 text-rose-100">
+                <Text className="mt-2 text-sm leading-6 text-red-700">
                   Delete this player and return to the roster. This removes the player record from
                   the current subteam.
                 </Text>
                 {deleteError ? (
                   <View className="mt-3">
-                    <FeedbackState title="Delete failed" message={deleteError} tone="error" />
+                    <WorkflowFeedback title="Delete failed" message={deleteError} tone="error" />
                   </View>
                 ) : null}
-                <View className="mt-4 gap-3">
-                  <AppButton
+                <View className="mt-4">
+                  <WorkflowButton
                     label="Confirm player deletion"
                     onPress={handleDelete}
-                    variant="danger"
+                    tone="danger"
                     loading={deleting}
                     disabled={deleting}
                   />
@@ -254,246 +244,268 @@ export function PlayerDetailScreen({
             ) : null}
           </View>
         ) : null}
+
         {loading ? (
-          <View className="items-center py-10">
-            <ActivityIndicator color="#f59e0b" />
-            <Text className="mt-3 text-sm text-stone-400">Loading player...</Text>
+          <View className="items-center rounded-2xl border border-slate-200 bg-slate-50 py-10">
+            <ActivityIndicator color="#10b981" />
+            <Text className="mt-3 text-sm text-slate-500">Loading player...</Text>
           </View>
         ) : player ? (
           <View className="gap-4">
-            <View className="rounded-[26px] border border-stone-800 bg-pitch p-4">
-              <Text className="text-lg font-semibold text-fog">
-                {player.first_name} {player.last_name}
-              </Text>
-              <Text className="mt-1 text-sm text-stone-300">
-                {player.position || 'Position not set'}
-              </Text>
-              <View className="mt-4 gap-3">
-                <DetailRow
-                  label="Email"
-                  value={player.email || 'No email'}
-                  valueTone={player.email ? 'default' : 'muted'}
-                />
-                <DetailRow
-                  label="Phone"
-                  value={player.phone || 'No phone'}
-                  valueTone={player.phone ? 'default' : 'muted'}
-                />
-                <DetailRow
-                  label="Height"
-                  value={player.height ? `${player.height} cm` : 'Not set'}
-                  valueTone={player.height ? 'default' : 'muted'}
-                />
-                <DetailRow
-                  label="Weight"
-                  value={player.weight ? `${player.weight} kg` : 'Not set'}
-                  valueTone={player.weight ? 'default' : 'muted'}
-                />
-                <DetailRow
-                  label="Jersey"
-                  value={player.jersey_number ? `#${player.jersey_number}` : 'Not set'}
-                  valueTone={player.jersey_number ? 'default' : 'muted'}
-                />
-              </View>
-            </View>
-
-            <View className="rounded-[26px] border border-stone-800 bg-pitch p-4">
-              <View className="flex-row items-start justify-between gap-4">
-                <View className="flex-1">
-                  <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">
-                    Face profile
-                  </Text>
-                  <Text className="mt-2 text-base font-semibold text-fog">Enrollment image</Text>
-                </View>
-                <StatusBadge
-                  label={player.face_image_url ? 'Uploaded' : 'Missing'}
-                  tone={player.face_image_url ? 'emerald' : 'rose'}
-                />
-              </View>
-
-              {player.face_image_url ? (
-                <View className="mt-4">
-                  <Image
-                    source={{ uri: toAbsoluteAssetUrl(player.face_image_url) }}
-                    className="h-72 w-full rounded-[20px] bg-stone-900"
-                    resizeMode="cover"
-                  />
-                </View>
-              ) : (
-                <View className="mt-4">
-                  <FeedbackState
-                    title="Face image missing"
-                    message="This player does not have an enrolled face image yet. Capture one now or choose an existing image from the library."
-                  />
-                </View>
-              )}
-
-              {uploadMessage ? (
-                <View className="mt-4">
-                  <FeedbackState title="Upload complete" message={uploadMessage} tone="success" />
-                </View>
-              ) : null}
-
-              {uploading && showSlowUploadHint ? (
-                <View className="mt-4">
-                  <FeedbackState
-                    title="Upload is taking longer"
-                    message="Stay on this screen while the image uploads. Slow mobile networks can delay large image submissions."
-                    tone="empty"
-                  />
-                </View>
-              ) : null}
-
-              {error ? (
-                <View className="mt-4">
-                  <FeedbackState title="Upload failed" message={error} tone="error" />
-                </View>
-              ) : null}
-
-              {lastUploadIssue ? (
-                <View className="mt-4 rounded-[24px] border border-stone-800 bg-stone-950/70 p-4">
-                  <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">
-                    Retry guidance
-                  </Text>
-                  <View className="mt-3 gap-3">
-                    {getRetryTips(lastUploadIssue).map((tip) => (
-                      <GuidanceItem
-                        key={tip.label}
-                        label={tip.label}
-                        tone={tip.tone}
-                        text={tip.text}
-                      />
-                    ))}
-                  </View>
-                  {draftAsset ? (
-                    <View className="mt-4 gap-3">
-                      <AppButton
-                        label="Retry upload"
-                        onPress={() => handleUpload(draftAsset)}
-                        variant="secondary"
-                        disabled={uploading}
-                      />
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-
-              {draftAsset ? (
-                <View className="mt-4 rounded-[24px] border border-amber-500/20 bg-amber-500/10 p-4">
-                  <View className="flex-row items-start justify-between gap-4">
-                    <View className="flex-1">
-                      <Text className="text-xs font-medium uppercase tracking-[2px] text-amber-300">
-                        Ready to upload
-                      </Text>
-                      <Text className="mt-2 text-base font-semibold text-fog">
-                        Preview before enrollment
-                      </Text>
-                      <Text className="mt-2 text-sm leading-6 text-stone-200">
-                        Review this image before sending it to the backend. For biometric flows, a
-                        quick manual check reduces bad enrollments.
-                      </Text>
-                    </View>
-                    <StatusBadge
-                      label={draftSource === 'camera' ? 'Camera' : 'Library'}
-                      tone="amber"
-                    />
-                  </View>
-
-                  <Image
-                    source={{ uri: draftAsset.uri }}
-                    className="mt-4 h-72 w-full rounded-[20px] bg-stone-900"
-                    resizeMode="cover"
-                  />
-
-                  <View className="mt-4 gap-3">
-                    {buildDraftChecks(draftAsset, draftSource).map((check) => (
-                      <GuidanceItem
-                        key={check.label}
-                        label={check.label}
-                        tone={check.tone}
-                        text={check.text}
-                      />
-                    ))}
-                  </View>
-
-                  <View className="mt-4 gap-3">
-                    <AppButton
-                      label="Upload previewed image"
-                      onPress={() => handleUpload(draftAsset)}
-                      variant="primary"
-                      disabled={uploading}
-                      loading={uploading}
-                    />
-                    <AppButton
-                      label="Discard preview"
-                      onPress={() => {
-                        setDraftAsset(null);
-                        setDraftSource(null);
-                      }}
-                      variant="ghost"
-                      disabled={uploading}
-                    />
-                  </View>
-                </View>
-              ) : (
-                <CaptureGuideCard
-                  title="Capture guidance"
-                  description="Use this checklist before opening the camera or library picker."
-                  items={[
-                    {
-                      label: 'Face position',
-                      tone: 'emerald',
-                      text: 'Keep one face centered, eyes visible, and avoid cutting off the forehead or chin.',
-                    },
-                    {
-                      label: 'Lighting',
-                      tone: 'sky',
-                      text: 'Use even front lighting and avoid harsh shadows, backlight, or very dark rooms.',
-                    },
-                    {
-                      label: 'Image quality',
-                      tone: 'violet',
-                      text: 'Avoid blur, extreme tilt, sunglasses, or busy backgrounds when possible.',
-                    },
-                  ]}
-                />
-              )}
-
-              <View className="mt-5 gap-3">
-                <AppButton
-                  label={player.face_image_url ? 'Retake with camera' : 'Capture with camera'}
-                  onPress={handleCaptureAndUpload}
-                  variant="primary"
-                  disabled={uploading}
-                  loading={uploading}
-                />
-                <AppButton
-                  label="Choose from library"
-                  onPress={handlePickAndUpload}
-                  variant="secondary"
-                  disabled={uploading}
-                />
-                <Text className="text-xs font-medium uppercase tracking-[1.5px] text-stone-500">
-                  Live camera opens a guide frame. Align first, then review the preview before
-                  upload.
-                </Text>
-                <Text className="text-xs leading-5 text-stone-500">
-                  {Platform.OS === 'web'
-                    ? 'Web can use the device camera when supported by the browser. If camera access is limited, choose an image from the library instead.'
-                    : 'Use the front camera with the live guide overlay for fresh enrollment, or fall back to an existing device photo.'}
-                </Text>
-              </View>
-            </View>
+            <ProfileCard player={player} />
+            <FaceProfileCard
+              draftAsset={draftAsset}
+              draftSource={draftSource}
+              error={error}
+              lastUploadIssue={lastUploadIssue}
+              player={player}
+              showSlowUploadHint={showSlowUploadHint}
+              uploadMessage={uploadMessage}
+              uploading={uploading}
+              onCapture={handleCaptureAndUpload}
+              onChooseLibrary={handlePickAndUpload}
+              onDiscardDraft={() => {
+                setDraftAsset(null);
+                setDraftSource(null);
+              }}
+              onUpload={handleUpload}
+            />
           </View>
         ) : (
-          <FeedbackState
+          <WorkflowFeedback
             title="Player unavailable"
             message="The player record could not be loaded from the backend."
             tone="error"
           />
         )}
-      </SurfaceCard>
-    </AppScreen>
+      </WorkflowSection>
+    </WorkflowScreen>
+  );
+}
+
+function HeroButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return <WorkflowButton label={label} onPress={onPress} />;
+}
+
+function ProfileCard({ player }: { player: Player }) {
+  return (
+    <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className="h-[3px] w-full bg-amber-500" />
+      <View className="p-4">
+        <View className="flex-row items-start justify-between gap-4">
+          <View className="flex-1">
+            <Text className="text-lg font-semibold text-slate-800">
+              {player.first_name} {player.last_name}
+            </Text>
+            <Text className="mt-1 text-sm text-slate-500">
+              {player.position || 'Position not set'}
+            </Text>
+          </View>
+          <StatusBadge label={player.is_active ? 'Active' : 'Inactive'} tone="amber" />
+        </View>
+
+        <View className="mt-4 gap-3">
+          <DetailField label="Email" value={player.email || 'No email'} muted={!player.email} />
+          <DetailField label="Phone" value={player.phone || 'No phone'} muted={!player.phone} />
+          <DetailField
+            label="Height"
+            value={player.height ? `${player.height} cm` : 'Not set'}
+            muted={!player.height}
+          />
+          <DetailField
+            label="Weight"
+            value={player.weight ? `${player.weight} kg` : 'Not set'}
+            muted={!player.weight}
+          />
+          <DetailField
+            label="Jersey"
+            value={player.jersey_number ? `#${player.jersey_number}` : 'Not set'}
+            muted={!player.jersey_number}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function FaceProfileCard({
+  draftAsset,
+  draftSource,
+  error,
+  lastUploadIssue,
+  player,
+  showSlowUploadHint,
+  uploadMessage,
+  uploading,
+  onCapture,
+  onChooseLibrary,
+  onDiscardDraft,
+  onUpload,
+}: {
+  draftAsset: DraftAsset | null;
+  draftSource: 'camera' | 'library' | null;
+  error: string | null;
+  lastUploadIssue: 'no_face' | 'multiple_faces' | 'invalid_image' | 'network' | 'unknown' | null;
+  player: Player;
+  showSlowUploadHint: boolean;
+  uploadMessage: string | null;
+  uploading: boolean;
+  onCapture: () => void;
+  onChooseLibrary: () => void;
+  onDiscardDraft: () => void;
+  onUpload: (asset: DraftAsset) => void;
+}) {
+  return (
+    <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className="h-[3px] w-full bg-emerald-500" />
+      <View className="p-4">
+        <View className="flex-row items-start justify-between gap-4">
+          <View className="flex-1">
+            <Text className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Face profile
+            </Text>
+            <Text className="mt-2 text-base font-semibold text-slate-800">Enrollment image</Text>
+          </View>
+          <StatusBadge
+            label={player.face_image_url ? 'Uploaded' : 'Missing'}
+            tone={player.face_image_url ? 'emerald' : 'rose'}
+          />
+        </View>
+
+        {player.face_image_url ? (
+          <Image
+            source={{ uri: toAbsoluteAssetUrl(player.face_image_url) }}
+            className="mt-4 h-72 w-full rounded-2xl bg-slate-100"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="mt-4">
+            <WorkflowFeedback
+              title="Face image missing"
+              message="Capture one now or choose an existing image from the library."
+            />
+          </View>
+        )}
+
+        {uploadMessage ? (
+          <View className="mt-4">
+            <WorkflowFeedback title="Upload complete" message={uploadMessage} tone="success" />
+          </View>
+        ) : null}
+
+        {uploading && showSlowUploadHint ? (
+          <View className="mt-4">
+            <WorkflowFeedback
+              title="Upload is taking longer"
+              message="Stay on this screen while the image uploads. Slow mobile networks can delay large image submissions."
+            />
+          </View>
+        ) : null}
+
+        {error ? (
+          <View className="mt-4">
+            <WorkflowFeedback title="Upload failed" message={error} tone="error" />
+          </View>
+        ) : null}
+
+        {lastUploadIssue ? (
+          <GuidanceCard title="Retry guidance" items={getRetryTips(lastUploadIssue)} />
+        ) : null}
+
+        {draftAsset ? (
+          <View className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
+            <View className="flex-row items-start justify-between gap-4">
+              <View className="flex-1">
+                <Text className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+                  Ready to upload
+                </Text>
+                <Text className="mt-2 text-base font-semibold text-slate-800">
+                  Preview before enrollment
+                </Text>
+                <Text className="mt-2 text-sm leading-6 text-slate-600">
+                  Review this image before sending it to the backend.
+                </Text>
+              </View>
+              <StatusBadge label={draftSource === 'camera' ? 'Camera' : 'Library'} tone="amber" />
+            </View>
+
+            <Image
+              source={{ uri: draftAsset.uri }}
+              className="mt-4 h-72 w-full rounded-2xl bg-slate-100"
+              resizeMode="cover"
+            />
+
+            <GuidanceList items={buildDraftChecks(draftAsset, draftSource)} />
+
+            <View className="mt-4 gap-3">
+              <WorkflowButton
+                label="Upload previewed image"
+                onPress={() => onUpload(draftAsset)}
+                tone="emerald"
+                disabled={uploading}
+                loading={uploading}
+              />
+              <WorkflowButton
+                label="Discard preview"
+                onPress={onDiscardDraft}
+                disabled={uploading}
+              />
+            </View>
+          </View>
+        ) : (
+          <GuidanceCard
+            title="Capture guidance"
+            description="Use this checklist before opening the camera or library picker."
+            items={[
+              {
+                label: 'Face position',
+                tone: 'emerald',
+                text: 'Keep one face centered, eyes visible, and avoid cutting off the forehead or chin.',
+              },
+              {
+                label: 'Lighting',
+                tone: 'sky',
+                text: 'Use even front lighting and avoid harsh shadows, backlight, or very dark rooms.',
+              },
+              {
+                label: 'Image quality',
+                tone: 'violet',
+                text: 'Avoid blur, extreme tilt, sunglasses, or busy backgrounds when possible.',
+              },
+            ]}
+          />
+        )}
+
+        <View className="mt-5 gap-3">
+          <WorkflowButton
+            label={player.face_image_url ? 'Retake with camera' : 'Capture with camera'}
+            onPress={onCapture}
+            tone="emerald"
+            disabled={uploading}
+            loading={uploading}
+          />
+          <WorkflowButton
+            label="Choose from library"
+            onPress={onChooseLibrary}
+            disabled={uploading}
+          />
+          <Text className="text-xs leading-5 text-slate-500">
+            {Platform.OS === 'web'
+              ? 'Web can use the device camera when supported by the browser. If camera access is limited, choose an image from the library instead.'
+              : 'Use the live guide overlay for fresh enrollment, or fall back to an existing device photo.'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function DetailField({ label, muted, value }: { label: string; muted?: boolean; value: string }) {
+  return (
+    <View className="flex-row items-center justify-between gap-4">
+      <Text className="text-xs uppercase tracking-[1px] text-slate-400">{label}</Text>
+      <Text className={`text-sm ${muted ? 'text-slate-400' : 'text-slate-700'}`}>{value}</Text>
+    </View>
   );
 }
 
@@ -507,9 +519,43 @@ function GuidanceItem({
   tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet';
 }) {
   return (
-    <View className="flex-row items-start gap-3">
+    <View className="gap-2">
       <StatusBadge label={label} tone={tone} />
-      <Text className="flex-1 text-sm leading-6 text-stone-300">{text}</Text>
+      <Text className="text-sm leading-6 text-slate-600">{text}</Text>
+    </View>
+  );
+}
+
+function GuidanceList({
+  items,
+}: {
+  items: { label: string; tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet'; text: string }[];
+}) {
+  return (
+    <View className="mt-3 gap-3">
+      {items.map((item) => (
+        <GuidanceItem key={item.label} label={item.label} tone={item.tone} text={item.text} />
+      ))}
+    </View>
+  );
+}
+
+function GuidanceCard({
+  description,
+  items,
+  title,
+}: {
+  description?: string;
+  items: { label: string; tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet'; text: string }[];
+  title: string;
+}) {
+  return (
+    <View className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <Text className="text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</Text>
+      {description ? (
+        <Text className="mt-2 text-sm leading-6 text-slate-500">{description}</Text>
+      ) : null}
+      <GuidanceList items={items} />
     </View>
   );
 }
@@ -567,28 +613,6 @@ function buildDraftChecks(asset: DraftAsset, source: 'camera' | 'library' | null
   });
 
   return checks;
-}
-
-function CaptureGuideCard({
-  description,
-  items,
-  title,
-}: {
-  description: string;
-  items: { label: string; tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet'; text: string }[];
-  title: string;
-}) {
-  return (
-    <View className="mt-4 rounded-[24px] border border-stone-800 bg-stone-950/70 p-4">
-      <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">{title}</Text>
-      <Text className="mt-2 text-sm leading-6 text-stone-300">{description}</Text>
-      <View className="mt-3 gap-3">
-        {items.map((item) => (
-          <GuidanceItem key={item.label} label={item.label} tone={item.tone} text={item.text} />
-        ))}
-      </View>
-    </View>
-  );
 }
 
 function toAbsoluteAssetUrl(value: string) {

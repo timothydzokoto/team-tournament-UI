@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../services/api';
 import { createSubteam, type Subteam } from '../services/subteams';
@@ -59,55 +59,47 @@ export function CreateSubteamScreen({ teamId, teamName, onCreated }: Props) {
   }
 
   return (
-    <AppScreen
-      accent="sky"
-      hero={
-        <HeroPanel
-          accent="sky"
-          eyebrow="Create"
-          title="New subteam"
-          description={`Create a subteam under ${teamName}. This is the group players will be assigned to.`}
-          aside={<StatusBadge label={`Team #${teamId}`} tone="sky" />}
-        />
-      }>
+    <WorkflowScreen
+      badgeLabel={`Team #${teamId}`}
+      badgeTone="sky"
+      title="New subteam"
+      description={`Create a subteam under ${teamName}. This is the group players will be assigned to.`}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SurfaceCard eyebrow="Subteam form" title="Create subteam record">
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <View className="gap-4">
-              <AppInput
-                label="Subteam name"
-                value={name}
-                onChangeText={(value) => {
-                  setName(value);
-                  setSubmitError(null);
-                }}
-                placeholder="U18 Squad"
-                autoCapitalize="words"
-                errorText={didAttemptSubmit ? nameError : null}
-                helperText="This subteam will be linked to the current team automatically."
-              />
-              <AppInput
-                label="Description"
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Subteam purpose or age bracket"
-                multiline
-              />
-              {submitError ? (
-                <FeedbackState title="Create failed" message={submitError} tone="error" />
-              ) : null}
-              <AppButton
-                label="Create subteam"
-                onPress={handleSubmit}
-                variant="primary"
-                loading={submitting}
-                disabled={submitting || !name.trim()}
-              />
-            </View>
-          </ScrollView>
-        </SurfaceCard>
+        <WorkflowSection eyebrow="Subteam form" title="Create subteam record">
+          <View className="gap-4">
+            <WorkflowInput
+              label="Subteam name"
+              value={name}
+              onChangeText={(value) => {
+                setName(value);
+                setSubmitError(null);
+              }}
+              placeholder="U18 Squad"
+              autoCapitalize="words"
+              errorText={didAttemptSubmit ? nameError : null}
+              helperText="This subteam will be linked to the current team automatically."
+            />
+            <WorkflowInput
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Subteam purpose or age bracket"
+              multiline
+            />
+            {submitError ? (
+              <WorkflowFeedback title="Create failed" message={submitError} tone="error" />
+            ) : null}
+            <WorkflowButton
+              label="Create subteam"
+              onPress={handleSubmit}
+              tone="emerald"
+              loading={submitting}
+              disabled={submitting || !name.trim()}
+            />
+          </View>
+        </WorkflowSection>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </WorkflowScreen>
   );
 }
 

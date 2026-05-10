@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../services/api';
 import { getTeam, type Team, updateTeam } from '../services/teams';
@@ -91,73 +84,64 @@ export function EditTeamScreen({ teamId, onSaved }: Props) {
   }
 
   return (
-    <AppScreen
-      accent="emerald"
-      hero={
-        <HeroPanel
-          accent="emerald"
-          eyebrow="Edit"
-          title="Update team"
-          description="Adjust team identity fields without affecting the rest of the navigation flow."
-          aside={<StatusBadge label={`Team #${teamId}`} tone="emerald" />}
-        />
-      }>
+    <WorkflowScreen
+      badgeLabel={`Team #${teamId}`}
+      title="Update team"
+      description="Adjust team identity fields without affecting the rest of the team flow.">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SurfaceCard eyebrow="Team form" title="Edit team record">
+        <WorkflowSection eyebrow="Team form" title="Edit team record">
           {loading ? (
-            <View className="items-center py-10">
+            <View className="items-center rounded-2xl border border-slate-200 bg-slate-50 py-10">
               <ActivityIndicator color="#10b981" />
-              <Text className="mt-3 text-sm text-stone-400">Loading team...</Text>
+              <Text className="mt-3 text-sm text-slate-500">Loading team...</Text>
             </View>
           ) : (
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View className="gap-4">
-                <AppInput
-                  label="Team name"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Senior Eagles"
-                  autoCapitalize="words"
-                  errorText={didAttemptSubmit ? nameError : null}
-                />
-                <AppInput
-                  label="Description"
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="High-level squad description"
-                  multiline
-                />
-                <AppInput
-                  label="Coach name"
-                  value={coachName}
-                  onChangeText={setCoachName}
-                  placeholder="Coach A. Mensah"
-                  autoCapitalize="words"
-                />
-                <AppInput
-                  label="Logo URL"
-                  value={logoUrl}
-                  onChangeText={setLogoUrl}
-                  placeholder="https://example.com/logo.png"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                {submitError ? (
-                  <FeedbackState title="Update failed" message={submitError} tone="error" />
-                ) : null}
-                <AppButton
-                  label="Save team"
-                  onPress={handleSubmit}
-                  variant="primary"
-                  loading={submitting}
-                  disabled={submitting || !name.trim()}
-                />
-              </View>
-            </ScrollView>
+            <View className="gap-4">
+              <WorkflowInput
+                label="Team name"
+                value={name}
+                onChangeText={setName}
+                placeholder="Senior Eagles"
+                autoCapitalize="words"
+                errorText={didAttemptSubmit ? nameError : null}
+              />
+              <WorkflowInput
+                label="Description"
+                value={description}
+                onChangeText={setDescription}
+                placeholder="High-level squad description"
+                multiline
+              />
+              <WorkflowInput
+                label="Coach name"
+                value={coachName}
+                onChangeText={setCoachName}
+                placeholder="Coach A. Mensah"
+                autoCapitalize="words"
+              />
+              <WorkflowInput
+                label="Logo URL"
+                value={logoUrl}
+                onChangeText={setLogoUrl}
+                placeholder="https://example.com/logo.png"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {submitError ? (
+                <WorkflowFeedback title="Update failed" message={submitError} tone="error" />
+              ) : null}
+              <WorkflowButton
+                label="Save team"
+                onPress={handleSubmit}
+                tone="emerald"
+                loading={submitting}
+                disabled={submitting || !name.trim()}
+              />
+            </View>
           )}
-        </SurfaceCard>
+        </WorkflowSection>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </WorkflowScreen>
   );
 }
 

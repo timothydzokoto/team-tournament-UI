@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../services/api';
 import { getSubteam, type Subteam, updateSubteam } from '../services/subteams';
@@ -87,58 +80,50 @@ export function EditSubteamScreen({ subteamId, teamId, onSaved }: Props) {
   }
 
   return (
-    <AppScreen
-      accent="sky"
-      hero={
-        <HeroPanel
-          accent="sky"
-          eyebrow="Edit"
-          title="Update subteam"
-          description="Adjust the subteam label or description while keeping it linked to the current team."
-          aside={<StatusBadge label={`Subteam #${subteamId}`} tone="sky" />}
-        />
-      }>
+    <WorkflowScreen
+      badgeLabel={`Subteam #${subteamId}`}
+      badgeTone="sky"
+      title="Update subteam"
+      description="Adjust the subteam label or description while keeping it linked to the current team.">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SurfaceCard eyebrow="Subteam form" title="Edit subteam record">
+        <WorkflowSection eyebrow="Subteam form" title="Edit subteam record">
           {loading ? (
-            <View className="items-center py-10">
-              <ActivityIndicator color="#38bdf8" />
-              <Text className="mt-3 text-sm text-stone-400">Loading subteam...</Text>
+            <View className="items-center rounded-2xl border border-slate-200 bg-slate-50 py-10">
+              <ActivityIndicator color="#10b981" />
+              <Text className="mt-3 text-sm text-slate-500">Loading subteam...</Text>
             </View>
           ) : (
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View className="gap-4">
-                <AppInput
-                  label="Subteam name"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="U18 Squad"
-                  autoCapitalize="words"
-                  errorText={didAttemptSubmit ? nameError : null}
-                />
-                <AppInput
-                  label="Description"
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="Subteam purpose or age bracket"
-                  multiline
-                />
-                {submitError ? (
-                  <FeedbackState title="Update failed" message={submitError} tone="error" />
-                ) : null}
-                <AppButton
-                  label="Save subteam"
-                  onPress={handleSubmit}
-                  variant="primary"
-                  loading={submitting}
-                  disabled={submitting || !name.trim()}
-                />
-              </View>
-            </ScrollView>
+            <View className="gap-4">
+              <WorkflowInput
+                label="Subteam name"
+                value={name}
+                onChangeText={setName}
+                placeholder="U18 Squad"
+                autoCapitalize="words"
+                errorText={didAttemptSubmit ? nameError : null}
+              />
+              <WorkflowInput
+                label="Description"
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Subteam purpose or age bracket"
+                multiline
+              />
+              {submitError ? (
+                <WorkflowFeedback title="Update failed" message={submitError} tone="error" />
+              ) : null}
+              <WorkflowButton
+                label="Save subteam"
+                onPress={handleSubmit}
+                tone="emerald"
+                loading={submitting}
+                disabled={submitting || !name.trim()}
+              />
+            </View>
           )}
-        </SurfaceCard>
+        </WorkflowSection>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </WorkflowScreen>
   );
 }
 

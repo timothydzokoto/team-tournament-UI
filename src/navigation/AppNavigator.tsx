@@ -1,17 +1,17 @@
 import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { Toast, ToastDescription, ToastTitle, useToast } from '@gluestack-ui/themed';
 
 import { SessionProvider, useSession } from '../context/SessionContext';
-import { ActivityScreen } from '../screens/ActivityScreen';
 import { CreatePlayerScreen } from '../screens/CreatePlayerScreen';
 import { CreateSubteamScreen } from '../screens/CreateSubteamScreen';
 import { CreateTeamScreen } from '../screens/CreateTeamScreen';
@@ -23,6 +23,7 @@ import { FaceMatchScreen } from '../screens/FaceMatchScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LiveCaptureScreen } from '../screens/LiveCaptureScreen';
 import { LoginScreen } from '../screens/LoginScreen';
+import { MatchScreen } from '../screens/MatchScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { PlayerDetailScreen } from '../screens/PlayerDetailScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
@@ -33,14 +34,14 @@ import { deleteSubteam, type Subteam } from '../services/subteams';
 import { deleteTeam, type Team } from '../services/teams';
 import type { AppRoute, CaptureAsset } from './types';
 
-type RootTab = 'Home' | 'Teams' | 'Verify' | 'Activity' | 'Profile';
+type RootTab = 'Home' | 'Teams' | 'Verify' | 'Match' | 'Profile';
 type TabStacks = Record<RootTab, AppRoute[]>;
 
 const TAB_LABELS: Record<RootTab, string> = {
   Home: 'Home',
   Teams: 'Teams',
   Verify: 'Verify',
-  Activity: 'Activity',
+  Match: 'Match',
   Profile: 'Profile',
 };
 
@@ -48,7 +49,7 @@ const TAB_HINTS: Record<RootTab, string> = {
   Home: 'overview',
   Teams: 'manage',
   Verify: 'match',
-  Activity: 'history',
+  Match: 'scores',
   Profile: 'session',
 };
 
@@ -57,37 +58,40 @@ function createInitialStacks(): TabStacks {
     Home: [{ name: 'Home' }],
     Teams: [{ name: 'Teams', params: { refreshKey: 0 } }],
     Verify: [{ name: 'FaceMatch' }],
-    Activity: [{ name: 'Activity', params: { refreshKey: 0 } }],
+    Match: [{ name: 'Match', params: { refreshKey: 0 } }],
     Profile: [{ name: 'Profile' }],
   };
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
 type TransitionKind = 'tab' | 'push' | 'pop';
 
-function AnimatedScreen({
-  children,
-  kind,
-}: {
-  children: React.ReactNode;
-  kind: TransitionKind;
-}) {
-  const opacity = useSharedValue(0);
-  const translateX = useSharedValue(kind === 'push' ? SCREEN_WIDTH * 0.18 : 0);
-  const translateY = useSharedValue(kind === 'tab' ? 10 : kind === 'pop' ? -6 : 0);
+function AnimatedScreen({ children, kind }: { children: React.ReactNode; kind: TransitionKind }) {
+  const opacity = useSharedValue(kind === 'push' ? 0.2 : kind === 'pop' ? 0.4 : 0);
+  const translateX = useSharedValue(kind === 'push' ? 60 : kind === 'pop' ? -24 : 0);
+  const translateY = useSharedValue(kind === 'tab' ? 14 : 0);
+  const scale = useSharedValue(kind === 'tab' ? 0.97 : 1);
 
   useEffect(() => {
     const easing = Easing.out(Easing.cubic);
-    opacity.value = withTiming(1, { duration: 230, easing });
-    translateX.value = withTiming(0, { duration: 230, easing });
-    translateY.value = withTiming(0, { duration: 230, easing });
-  }, [opacity, translateX, translateY]);
+    if (kind === 'push' || kind === 'pop') {
+      const springConfig = { damping: 24, stiffness: 280, mass: 0.85 };
+      opacity.value = withSpring(1, springConfig);
+      translateX.value = withSpring(0, springConfig);
+    } else {
+      opacity.value = withTiming(1, { duration: 280, easing });
+      translateY.value = withTiming(0, { duration: 280, easing });
+      scale.value = withTiming(1, { duration: 280, easing });
+    }
+  }, [kind, opacity, translateX, translateY, scale]);
 
   const animStyle = useAnimatedStyle(() => ({
     flex: 1,
     opacity: opacity.value,
-    transform: [{ translateX: translateX.value }, { translateY: translateY.value }],
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
   }));
 
   return <Animated.View style={animStyle}>{children}</Animated.View>;
@@ -426,10 +430,10 @@ function RootNavigation() {
             openHome: () => switchTab('Home'),
             openTeams: () => switchTab('Teams'),
             openVerify: () => switchTab('Verify'),
-            openActivity: () =>
+            openMatch: () =>
               setTabStacks((current) => ({
                 ...current,
-                Activity: [{ name: 'Activity', params: { refreshKey: Date.now() } }],
+                Match: [{ name: 'Match', params: { refreshKey: Date.now() } }],
               })),
             openProfile: () => switchTab('Profile'),
             push,
@@ -452,36 +456,40 @@ function RootNavigation() {
 
   return (
     <View className="flex-1 bg-pitch">
-      <View className="border-b border-stone-800 bg-panel px-4 py-3">
+      <View
+        className="border-b border-stone-800 bg-panel"
+        style={{ paddingTop: insets.top + 8, paddingBottom: 12, paddingHorizontal: 16 }}>
         <View className="mx-auto w-full max-w-[1120px] flex-row items-center justify-between gap-4">
-          <View className="w-24 items-start">
+          <View className="w-28 items-start">
             {canGoBack ? (
               <Pressable
-                className="min-h-11 min-w-20 items-center justify-center rounded-full border border-amber-400/20 bg-amber-500/10 px-4"
-                hitSlop={8}
+                className="flex-row items-center justify-center rounded-full border border-amber-400/20 bg-amber-500/10 px-3"
+                style={{ minHeight: 36, gap: 2 }}
+                hitSlop={10}
                 onPress={goBack}>
+                <Ionicons name="chevron-back" size={15} color="#fcd34d" />
                 <Text className="text-sm font-medium text-amber-300">Back</Text>
               </Pressable>
             ) : (
-              <View className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-2">
+              <View className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5">
                 <Text className="text-[11px] font-medium uppercase tracking-[2px] text-emerald-300">
                   Live
                 </Text>
               </View>
             )}
           </View>
-          <Text
-            className="flex-1 px-4 text-center text-base font-semibold text-fog"
-            numberOfLines={1}>
-            {getRouteTitle(currentRoute)}
-          </Text>
-          <Text
-            className="absolute bottom-[-10px] left-28 right-28 text-center text-[11px] uppercase tracking-[1.5px] text-stone-500"
-            numberOfLines={1}>
-            {routeSubtitle}
-          </Text>
-          <View className="w-24 items-end">
-            <View className="rounded-full border border-stone-800 bg-pitch px-3 py-2">
+          <View className="flex-1 items-center">
+            <Text className="text-base font-semibold text-fog" numberOfLines={1}>
+              {getRouteTitle(currentRoute)}
+            </Text>
+            <Text
+              className="mt-0.5 text-[10px] uppercase tracking-[1.5px] text-stone-500"
+              numberOfLines={1}>
+              {routeSubtitle}
+            </Text>
+          </View>
+          <View className="w-28 items-end">
+            <View className="rounded-full border border-stone-800 bg-pitch px-3 py-1.5">
               <Text className="text-[11px] font-medium uppercase tracking-[2px] text-stone-400">
                 {user?.username || rightBadge}
               </Text>
@@ -499,10 +507,10 @@ function RootNavigation() {
           openHome: () => switchTab('Home'),
           openTeams: () => switchTab('Teams'),
           openVerify: () => switchTab('Verify'),
-          openActivity: () =>
+          openMatch: () =>
             setTabStacks((current) => ({
               ...current,
-              Activity: [{ name: 'Activity', params: { refreshKey: Date.now() } }],
+              Match: [{ name: 'Match', params: { refreshKey: Date.now() } }],
             })),
           openProfile: () => switchTab('Profile'),
           push,
@@ -530,10 +538,10 @@ function RootNavigation() {
           style={{
             flexDirection: 'row',
             alignItems: 'flex-end',
-            justifyContent: 'space-around',
-            paddingHorizontal: 8,
-            paddingTop: 6,
-            paddingBottom: Math.max(insets.bottom, 10),
+            justifyContent: 'space-between',
+            paddingHorizontal: 4,
+            paddingTop: 8,
+            paddingBottom: Math.max(insets.bottom, 12),
             maxWidth: 1120,
             alignSelf: 'center',
             width: '100%',
@@ -543,7 +551,7 @@ function RootNavigation() {
               { label: TAB_LABELS.Home, icon: 'home', tab: 'Home' },
               { label: TAB_LABELS.Teams, icon: 'people', tab: 'Teams' },
               { label: TAB_LABELS.Verify, icon: 'camera', tab: 'Verify', center: true },
-              { label: TAB_LABELS.Activity, icon: 'list', tab: 'Activity' },
+              { label: TAB_LABELS.Match, icon: 'trophy', tab: 'Match' },
               { label: TAB_LABELS.Profile, icon: 'person', tab: 'Profile' },
             ] as {
               label: string;
@@ -554,9 +562,9 @@ function RootNavigation() {
           ).map(({ label, icon, tab, center }) => {
             const isActive = activeTab === tab;
             function handlePress() {
-              if (tab === 'Activity') {
-                replaceTabRoot('Activity', {
-                  name: 'Activity',
+              if (tab === 'Match') {
+                replaceTabRoot('Match', {
+                  name: 'Match',
                   params: { refreshKey: Date.now() },
                 });
               }
@@ -568,25 +576,25 @@ function RootNavigation() {
                 <Pressable
                   key={tab}
                   onPress={handlePress}
-                  hitSlop={6}
-                  style={{ alignItems: 'center', marginTop: -22 }}>
+                  hitSlop={8}
+                  style={{ flex: 1, alignItems: 'center', marginTop: -28 }}>
                   <View
                     style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
+                      width: 64,
+                      height: 64,
+                      borderRadius: 32,
                       backgroundColor: isActive ? '#2563eb' : '#1e3a8a',
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderWidth: 3,
                       borderColor: '#0d1424',
                       shadowColor: '#3b82f6',
-                      shadowOffset: { width: 0, height: -3 },
-                      shadowOpacity: isActive ? 0.6 : 0.2,
-                      shadowRadius: 10,
-                      elevation: 10,
+                      shadowOffset: { width: 0, height: -4 },
+                      shadowOpacity: isActive ? 0.7 : 0.25,
+                      shadowRadius: 14,
+                      elevation: 14,
                     }}>
-                    <Ionicons name="camera" size={26} color="#fff" />
+                    <Ionicons name="camera" size={27} color="#fff" />
                   </View>
                   <Text
                     style={{
@@ -606,34 +614,34 @@ function RootNavigation() {
                 key={tab}
                 onPress={handlePress}
                 hitSlop={8}
-                style={{ alignItems: 'center', paddingHorizontal: 12, paddingBottom: 2 }}>
-                <Ionicons
-                  name={
-                    isActive
-                      ? (icon as keyof typeof Ionicons.glyphMap)
-                      : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
-                  }
-                  size={22}
-                  color={isActive ? '#60a5fa' : '#64748b'}
-                />
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: '600',
-                    color: isActive ? '#60a5fa' : '#64748b',
-                    marginTop: 3,
-                  }}>
-                  {label}
-                </Text>
+                style={{ flex: 1, alignItems: 'center', paddingBottom: 2 }}>
                 <View
                   style={{
-                    marginTop: 4,
-                    height: 3,
-                    width: 3,
-                    borderRadius: 2,
-                    backgroundColor: isActive ? '#3b82f6' : 'transparent',
-                  }}
-                />
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 18,
+                    backgroundColor: isActive ? 'rgba(59,130,246,0.14)' : 'transparent',
+                    alignItems: 'center',
+                  }}>
+                  <Ionicons
+                    name={
+                      isActive
+                        ? (icon as keyof typeof Ionicons.glyphMap)
+                        : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
+                    }
+                    size={22}
+                    color={isActive ? '#60a5fa' : '#64748b'}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: '600',
+                      color: isActive ? '#60a5fa' : '#64748b',
+                      marginTop: 3,
+                    }}>
+                    {label}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
@@ -653,7 +661,7 @@ function renderRoute({
   handleDeletePlayer,
   handleDeleteSubteam,
   handleDeleteTeam,
-  openActivity,
+  openMatch,
   openCreatedPlayer,
   openCreatedSubteam,
   openCreatedTeam,
@@ -675,7 +683,7 @@ function renderRoute({
   handleDeletePlayer: (playerId: number, subteamId: number) => Promise<void>;
   handleDeleteSubteam: (subteamId: number, teamId: number) => Promise<void>;
   handleDeleteTeam: (teamId: number) => Promise<void>;
-  openActivity: () => void;
+  openMatch: () => void;
   openCreatedPlayer: (playerId: number, playerName: string, subteamId: number) => void;
   openCreatedSubteam: (subteamId: number, subteamName: string, teamId: number) => void;
   openCreatedTeam: (teamId: number, teamName: string) => void;
@@ -759,15 +767,8 @@ function renderRoute({
     );
   }
 
-  if (currentRoute.name === 'Activity') {
-    return (
-      <ActivityScreen
-        refreshKey={currentRoute.params.refreshKey}
-        onOpenMatchedPlayer={({ playerId, playerName }) =>
-          push({ name: 'PlayerDetail', params: { playerId, playerName } }, 'Activity')
-        }
-      />
-    );
+  if (currentRoute.name === 'Match') {
+    return <MatchScreen refreshKey={currentRoute.params.refreshKey} />;
   }
 
   if (currentRoute.name === 'Profile') {
@@ -989,8 +990,8 @@ function getRouteTitle(route: AppRoute) {
     return route.params.title;
   }
 
-  if (route.name === 'Activity') {
-    return 'Activity';
+  if (route.name === 'Match') {
+    return 'Match';
   }
 
   if (route.name === 'Profile') {
@@ -1045,8 +1046,8 @@ function getRouteSubtitle(route: AppRoute, activeTab: RootTab) {
     return 'Live camera framing with guide overlay';
   }
 
-  if (route.name === 'Activity') {
-    return 'Recent biometric outcomes on this device';
+  if (route.name === 'Match') {
+    return 'Fixtures, scores, standings, and player stats';
   }
 
   if (route.name === 'Profile') {

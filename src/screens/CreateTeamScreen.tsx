@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppInput } from '../components/ui/AppInput';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
-import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowInput,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import { ApiError } from '../services/api';
 import { createTeam, type Team } from '../services/teams';
@@ -60,70 +60,61 @@ export function CreateTeamScreen({ onCreated }: Props) {
   }
 
   return (
-    <AppScreen
-      accent="emerald"
-      hero={
-        <HeroPanel
-          accent="emerald"
-          eyebrow="Create"
-          title="New team"
-          description="Create a top-level team first. Subteams and players can be attached after this record exists."
-          aside={<StatusBadge label="Required name" tone="emerald" />}
-        />
-      }>
+    <WorkflowScreen
+      badgeLabel="Required name"
+      title="New team"
+      description="Create the top-level team record. Subteams and players can be added after this exists.">
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <SurfaceCard eyebrow="Team form" title="Create team record">
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <View className="gap-4">
-              <AppInput
-                label="Team name"
-                value={name}
-                onChangeText={(value) => {
-                  setName(value);
-                  setSubmitError(null);
-                }}
-                placeholder="Senior Eagles"
-                autoCapitalize="words"
-                errorText={didAttemptSubmit ? nameError : null}
-                helperText="Use a distinct name. The backend rejects duplicates."
-              />
-              <AppInput
-                label="Description"
-                value={description}
-                onChangeText={setDescription}
-                placeholder="High-level squad description"
-                multiline
-              />
-              <AppInput
-                label="Coach name"
-                value={coachName}
-                onChangeText={setCoachName}
-                placeholder="Coach A. Mensah"
-                autoCapitalize="words"
-              />
-              <AppInput
-                label="Logo URL"
-                value={logoUrl}
-                onChangeText={setLogoUrl}
-                placeholder="https://example.com/logo.png"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {submitError ? (
-                <FeedbackState title="Create failed" message={submitError} tone="error" />
-              ) : null}
-              <AppButton
-                label="Create team"
-                onPress={handleSubmit}
-                variant="primary"
-                loading={submitting}
-                disabled={submitting || !name.trim()}
-              />
-            </View>
-          </ScrollView>
-        </SurfaceCard>
+        <WorkflowSection eyebrow="Team form" title="Create team record">
+          <View className="gap-4">
+            <WorkflowInput
+              label="Team name"
+              value={name}
+              onChangeText={(value) => {
+                setName(value);
+                setSubmitError(null);
+              }}
+              placeholder="Senior Eagles"
+              autoCapitalize="words"
+              errorText={didAttemptSubmit ? nameError : null}
+              helperText="Use a distinct name. The backend rejects duplicates."
+            />
+            <WorkflowInput
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="High-level squad description"
+              multiline
+            />
+            <WorkflowInput
+              label="Coach name"
+              value={coachName}
+              onChangeText={setCoachName}
+              placeholder="Coach A. Mensah"
+              autoCapitalize="words"
+            />
+            <WorkflowInput
+              label="Logo URL"
+              value={logoUrl}
+              onChangeText={setLogoUrl}
+              placeholder="https://example.com/logo.png"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {submitError ? (
+              <WorkflowFeedback title="Create failed" message={submitError} tone="error" />
+            ) : null}
+            <WorkflowButton
+              label="Create team"
+              onPress={handleSubmit}
+              tone="emerald"
+              loading={submitting}
+              disabled={submitting || !name.trim()}
+            />
+          </View>
+        </WorkflowSection>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </WorkflowScreen>
   );
 }
 

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Image, Platform, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-import { AppButton } from '../components/ui/AppButton';
-import { AppScreen } from '../components/ui/AppScreen';
-import { FeedbackState } from '../components/ui/FeedbackState';
-import { HeroPanel } from '../components/ui/HeroPanel';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { SurfaceCard } from '../components/ui/SurfaceCard';
+import {
+  WorkflowButton,
+  WorkflowFeedback,
+  WorkflowScreen,
+  WorkflowSection,
+} from '../components/ui/WorkflowScreen';
 import { useSession } from '../context/SessionContext';
 import type { CaptureAsset } from '../navigation/types';
 import { ApiError, getFaceFlowErrorMessage } from '../services/api';
@@ -162,83 +163,36 @@ export function FaceMatchScreen({
   }
 
   return (
-    <AppScreen
-      accent="amber"
-      hero={
-        <HeroPanel
-          accent="amber"
-          eyebrow="Verify"
-          title="Face match"
-          description="Capture or choose a face image, preview it, and ask the backend to match it against enrolled player profiles."
-          aside={<StatusBadge label="Verification" tone="amber" />}
-        />
-      }>
-      <SurfaceCard eyebrow="Capture" title="Verification image">
+    <WorkflowScreen
+      badgeLabel="Verification"
+      badgeTone="amber"
+      title="Face match"
+      description="Capture or choose a face image, preview it, and match it against enrolled player profiles.">
+      <WorkflowSection eyebrow="Capture" title="Verification image">
         {draftAsset ? (
           <View className="gap-4">
-            <View className="rounded-[26px] border border-amber-500/20 bg-amber-500/10 p-4">
-              <View className="flex-row items-start justify-between gap-4">
-                <View className="flex-1">
-                  <Text className="text-xs font-medium uppercase tracking-[2px] text-amber-300">
-                    Ready to verify
-                  </Text>
-                  <Text className="mt-2 text-base font-semibold text-fog">
-                    Preview before match
-                  </Text>
-                  <Text className="mt-2 text-sm leading-6 text-stone-200">
-                    Use one clear face, frontal framing, and even lighting for better match
-                    accuracy.
-                  </Text>
-                </View>
-                <StatusBadge label={draftSource === 'camera' ? 'Camera' : 'Library'} tone="amber" />
-              </View>
-
-              <Image
-                source={{ uri: draftAsset.uri }}
-                className="mt-4 h-72 w-full rounded-[20px] bg-stone-900"
-                resizeMode="cover"
-              />
-            </View>
-
-            <View className="gap-3">
-              {buildVerificationChecks(draftAsset, draftSource).map((item) => (
-                <GuidanceItem
-                  key={item.label}
-                  label={item.label}
-                  tone={item.tone}
-                  text={item.text}
-                />
-              ))}
-            </View>
-
-            <View className="gap-3">
-              <AppButton
-                label="Run face match"
-                onPress={handleMatch}
-                variant="primary"
-                loading={matching}
-                disabled={matching}
-              />
-              <AppButton
-                label="Discard preview"
-                onPress={() => {
-                  setDraftAsset(null);
-                  setDraftSource(null);
-                  setMatchResult(null);
-                  setError(null);
-                }}
-                variant="ghost"
-                disabled={matching}
-              />
-            </View>
+            <PreviewCard
+              draftAsset={draftAsset}
+              draftSource={draftSource}
+              matching={matching}
+              onDiscard={() => {
+                setDraftAsset(null);
+                setDraftSource(null);
+                setMatchResult(null);
+                setError(null);
+                setResultState('idle');
+              }}
+              onMatch={handleMatch}
+            />
+            <GuidanceList items={buildVerificationChecks(draftAsset, draftSource)} />
           </View>
         ) : (
           <View className="gap-4">
-            <FeedbackState
+            <WorkflowFeedback
               title="No image selected"
               message="Start with a fresh camera capture or choose an existing image to verify."
             />
-            <CaptureGuideCard
+            <GuidanceCard
               title="Capture guidance"
               description="Prepare the image before opening the system camera or library picker."
               items={[
@@ -260,148 +214,215 @@ export function FaceMatchScreen({
               ]}
             />
             <View className="gap-3">
-              <AppButton label="Capture with camera" onPress={handleCapture} variant="primary" />
-              <AppButton label="Choose from library" onPress={handlePick} variant="secondary" />
+              <WorkflowButton label="Capture with camera" onPress={handleCapture} tone="emerald" />
+              <WorkflowButton label="Choose from library" onPress={handlePick} />
             </View>
-            <Text className="text-xs font-medium uppercase tracking-[1.5px] text-stone-500">
-              Live camera opens a guide frame. Center one face before capture, then confirm the
-              preview before verifying.
-            </Text>
-            <Text className="text-xs leading-5 text-stone-500">
+            <Text className="text-xs leading-5 text-slate-500">
               {Platform.OS === 'web'
                 ? 'Web can use the camera when the browser allows it. If not, use the library option.'
                 : 'Use the front camera with the live guide overlay for verification, or fall back to the device library.'}
             </Text>
           </View>
         )}
-      </SurfaceCard>
+      </WorkflowSection>
 
-      <SurfaceCard eyebrow="Result" title="Match outcome">
+      <WorkflowSection eyebrow="Result" title="Match outcome">
         {matching ? (
           <View className="gap-4">
-            <FeedbackState
+            <WorkflowFeedback
               title="Matching in progress"
               message="The backend is comparing the submitted face against enrolled player profiles."
               tone="success"
             />
             {showSlowMatchHint ? (
-              <FeedbackState
+              <WorkflowFeedback
                 title="Verification is taking longer"
                 message="Stay on this screen while the request completes. Matching can take longer on weak networks or busy backend containers."
-                tone="empty"
               />
             ) : null}
           </View>
         ) : error ? (
-          <View className="gap-4">
-            <FeedbackState
-              title={getResultTitle(resultState)}
-              message={error}
-              tone={resultState === 'no_match' ? 'empty' : 'error'}
-            />
-            <View className="rounded-[24px] border border-stone-800 bg-stone-950/70 p-4">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">
-                Retry guidance
-              </Text>
-              <View className="mt-3 gap-3">
-                {getMatchRetryTips(resultState).map((tip) => (
-                  <GuidanceItem key={tip.label} label={tip.label} tone={tip.tone} text={tip.text} />
-                ))}
-              </View>
-              <View className="mt-4 gap-3">
-                {draftAsset ? (
-                  <AppButton label="Retry same image" onPress={handleMatch} variant="secondary" />
-                ) : null}
-                <AppButton
-                  label="Try another image"
-                  onPress={() => {
-                    setDraftAsset(null);
-                    setDraftSource(null);
-                    setMatchResult(null);
-                    setError(null);
-                    setResultState('idle');
-                  }}
-                  variant="secondary"
-                />
-              </View>
-            </View>
-          </View>
+          <ErrorResult
+            draftAsset={draftAsset}
+            error={error}
+            resultState={resultState}
+            onReset={() => {
+              setDraftAsset(null);
+              setDraftSource(null);
+              setMatchResult(null);
+              setError(null);
+              setResultState('idle');
+            }}
+            onRetry={handleMatch}
+          />
         ) : matchResult ? (
-          <View className="gap-4">
-            <View className="rounded-[26px] border border-emerald-500/20 bg-emerald-500/10 p-4">
-              <View className="flex-row items-start justify-between gap-4">
-                <View className="flex-1">
-                  <Text className="text-xs font-medium uppercase tracking-[2px] text-emerald-300">
-                    Match found
-                  </Text>
-                  <Text className="mt-2 text-2xl font-semibold text-fog">
-                    {matchResult.player_name}
-                  </Text>
-                  <Text className="mt-2 text-sm leading-6 text-stone-200">
-                    Backend match completed successfully. Review the confidence level before acting
-                    on the result.
-                  </Text>
-                </View>
-                <StatusBadge
-                  label={`${Math.round(matchResult.confidence * 100)}%`}
-                  tone="emerald"
-                />
-              </View>
-
-              <View className="mt-4 rounded-[22px] border border-stone-800 bg-pitch/80 p-4">
-                <View className="flex-row items-center justify-between gap-4">
-                  <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">
-                    Confidence interpretation
-                  </Text>
-                  <StatusBadge
-                    label={getConfidenceSummary(matchResult.confidence).label}
-                    tone={getConfidenceSummary(matchResult.confidence).tone}
-                  />
-                </View>
-                <Text className="mt-3 text-sm leading-6 text-stone-200">
-                  {getConfidenceSummary(matchResult.confidence).message}
-                </Text>
-              </View>
-
-              {matchResult.face_image_url ? (
-                <Image
-                  source={{ uri: toAbsoluteAssetUrl(matchResult.face_image_url) }}
-                  className="mt-4 h-56 w-full rounded-[20px] bg-stone-900"
-                  resizeMode="cover"
-                />
-              ) : null}
-
-              <View className="mt-4 gap-3">
-                <ResultRow label="Player ID" value={String(matchResult.player_id)} />
-                <ResultRow
-                  label="Confidence"
-                  value={`${Math.round(matchResult.confidence * 100)}%`}
-                />
-              </View>
-            </View>
-
-            <View className="gap-3">
-              <AppButton
-                label="Try another face"
-                onPress={() => {
-                  setDraftAsset(null);
-                  setDraftSource(null);
-                  setMatchResult(null);
-                  setError(null);
-                  setResultState('idle');
-                }}
-                variant="secondary"
-              />
-            </View>
-          </View>
+          <MatchResultCard
+            matchResult={matchResult}
+            onReset={() => {
+              setDraftAsset(null);
+              setDraftSource(null);
+              setMatchResult(null);
+              setError(null);
+              setResultState('idle');
+            }}
+          />
         ) : (
-          <FeedbackState
+          <WorkflowFeedback
             title="No result yet"
             message="Run a verification after selecting an image to see the match result here."
           />
         )}
-      </SurfaceCard>
-    </AppScreen>
+      </WorkflowSection>
+    </WorkflowScreen>
+  );
+}
+
+function PreviewCard({
+  draftAsset,
+  draftSource,
+  matching,
+  onDiscard,
+  onMatch,
+}: {
+  draftAsset: DraftAsset;
+  draftSource: 'camera' | 'library' | null;
+  matching: boolean;
+  onDiscard: () => void;
+  onMatch: () => void;
+}) {
+  return (
+    <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <View className="h-[3px] w-full bg-amber-500" />
+      <View className="p-4">
+        <View className="flex-row items-start justify-between gap-4">
+          <View className="flex-1">
+            <Text className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+              Ready to verify
+            </Text>
+            <Text className="mt-2 text-base font-semibold text-slate-800">
+              Preview before match
+            </Text>
+            <Text className="mt-2 text-sm leading-6 text-slate-500">
+              Use one clear face, frontal framing, and even lighting for better match accuracy.
+            </Text>
+          </View>
+          <StatusBadge label={draftSource === 'camera' ? 'Camera' : 'Library'} tone="amber" />
+        </View>
+
+        <Image
+          source={{ uri: draftAsset.uri }}
+          className="mt-4 h-72 w-full rounded-2xl bg-slate-100"
+          resizeMode="cover"
+        />
+
+        <View className="mt-4 gap-3">
+          <WorkflowButton
+            label="Run face match"
+            onPress={onMatch}
+            tone="emerald"
+            loading={matching}
+            disabled={matching}
+          />
+          <WorkflowButton label="Discard preview" onPress={onDiscard} disabled={matching} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ErrorResult({
+  draftAsset,
+  error,
+  resultState,
+  onReset,
+  onRetry,
+}: {
+  draftAsset: DraftAsset | null;
+  error: string;
+  resultState:
+    | 'idle'
+    | 'match'
+    | 'no_match'
+    | 'no_face'
+    | 'multiple_faces'
+    | 'network'
+    | 'service'
+    | 'error';
+  onReset: () => void;
+  onRetry: () => void;
+}) {
+  return (
+    <View className="gap-4">
+      <WorkflowFeedback
+        title={getResultTitle(resultState)}
+        message={error}
+        tone={resultState === 'no_match' ? 'empty' : 'error'}
+      />
+      <GuidanceCard title="Retry guidance" items={getMatchRetryTips(resultState)} />
+      <View className="gap-3">
+        {draftAsset ? <WorkflowButton label="Retry same image" onPress={onRetry} /> : null}
+        <WorkflowButton label="Try another image" onPress={onReset} />
+      </View>
+    </View>
+  );
+}
+
+function MatchResultCard({
+  matchResult,
+  onReset,
+}: {
+  matchResult: PlayerFaceMatch;
+  onReset: () => void;
+}) {
+  const confidence = getConfidenceSummary(matchResult.confidence);
+
+  return (
+    <View className="gap-4">
+      <View className="overflow-hidden rounded-2xl border border-emerald-100 bg-emerald-50">
+        <View className="h-[3px] w-full bg-emerald-500" />
+        <View className="p-4">
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="flex-1">
+              <Text className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
+                Match found
+              </Text>
+              <Text className="mt-2 text-2xl font-semibold text-slate-800">
+                {matchResult.player_name}
+              </Text>
+              <Text className="mt-2 text-sm leading-6 text-slate-600">
+                Backend match completed successfully. Review confidence before acting on the result.
+              </Text>
+            </View>
+            <StatusBadge label={`${Math.round(matchResult.confidence * 100)}%`} tone="emerald" />
+          </View>
+
+          <View className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <View className="flex-row items-center justify-between gap-4">
+              <Text className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Confidence interpretation
+              </Text>
+              <StatusBadge label={confidence.label} tone={confidence.tone} />
+            </View>
+            <Text className="mt-3 text-sm leading-6 text-slate-600">{confidence.message}</Text>
+          </View>
+
+          {matchResult.face_image_url ? (
+            <Image
+              source={{ uri: toAbsoluteAssetUrl(matchResult.face_image_url) }}
+              className="mt-4 h-56 w-full rounded-2xl bg-slate-100"
+              resizeMode="cover"
+            />
+          ) : null}
+
+          <View className="mt-4 gap-3">
+            <ResultRow label="Player ID" value={String(matchResult.player_id)} />
+            <ResultRow label="Confidence" value={`${Math.round(matchResult.confidence * 100)}%`} />
+          </View>
+        </View>
+      </View>
+
+      <WorkflowButton label="Try another face" onPress={onReset} />
+    </View>
   );
 }
 
@@ -415,9 +436,45 @@ function GuidanceItem({
   tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet';
 }) {
   return (
-    <View className="flex-row items-start gap-3">
+    <View className="gap-2">
       <StatusBadge label={label} tone={tone} />
-      <Text className="flex-1 text-sm leading-6 text-stone-300">{text}</Text>
+      <Text className="text-sm leading-6 text-slate-600">{text}</Text>
+    </View>
+  );
+}
+
+function GuidanceList({
+  items,
+}: {
+  items: { label: string; tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet'; text: string }[];
+}) {
+  return (
+    <View className="gap-3">
+      {items.map((item) => (
+        <GuidanceItem key={item.label} label={item.label} tone={item.tone} text={item.text} />
+      ))}
+    </View>
+  );
+}
+
+function GuidanceCard({
+  description,
+  items,
+  title,
+}: {
+  description?: string;
+  items: { label: string; tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet'; text: string }[];
+  title: string;
+}) {
+  return (
+    <View className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <Text className="text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</Text>
+      {description ? (
+        <Text className="mt-2 text-sm leading-6 text-slate-500">{description}</Text>
+      ) : null}
+      <View className="mt-3">
+        <GuidanceList items={items} />
+      </View>
     </View>
   );
 }
@@ -425,30 +482,8 @@ function GuidanceItem({
 function ResultRow({ label, value }: { label: string; value: string }) {
   return (
     <View className="flex-row items-center justify-between gap-4">
-      <Text className="text-xs uppercase tracking-[1px] text-stone-500">{label}</Text>
-      <Text className="text-sm text-stone-100">{value}</Text>
-    </View>
-  );
-}
-
-function CaptureGuideCard({
-  description,
-  items,
-  title,
-}: {
-  description: string;
-  items: { label: string; tone: 'emerald' | 'amber' | 'rose' | 'sky' | 'violet'; text: string }[];
-  title: string;
-}) {
-  return (
-    <View className="rounded-[24px] border border-stone-800 bg-stone-950/70 p-4">
-      <Text className="text-xs font-medium uppercase tracking-[2px] text-stone-400">{title}</Text>
-      <Text className="mt-2 text-sm leading-6 text-stone-300">{description}</Text>
-      <View className="mt-3 gap-3">
-        {items.map((item) => (
-          <GuidanceItem key={item.label} label={item.label} tone={item.tone} text={item.text} />
-        ))}
-      </View>
+      <Text className="text-xs uppercase tracking-[1px] text-slate-400">{label}</Text>
+      <Text className="text-sm text-slate-700">{value}</Text>
     </View>
   );
 }
@@ -670,7 +705,7 @@ function getMatchRetryTips(
       {
         label: 'Backend',
         tone: 'rose' as const,
-        text: 'Use the dashboard readiness card to confirm face recognition is still available.',
+        text: 'Use Home readiness to confirm face recognition is still available.',
       },
       {
         label: 'Escalate',
